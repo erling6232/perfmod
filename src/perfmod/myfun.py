@@ -1,21 +1,13 @@
 import numpy as np
+from .models import default_parameters
 
 
-def make_annet_conv(aif_value):
+def make_annet_conv(aif_value, b0in, prmin):
     # Construction to pass aif_value to function
     # def myfun_annet_conv(x, tau, d, fa, k21, k12):
     def myfun_annet_conv(x, *b):
 
-        # b = [tau d fa k21 k12]
-        # tau = b(1);
-        # d   = b(2);
-        # fa  = b(3);
-        # k21 = b(4);
-        # k12 = b(5);
         tau, d, fa, k21, k12 = b
-
-        # ntime = numel(x);
-        # ntime = np.prod(x.size).item()
 
         # delta t
         # dt = (x([2:end end]) - x([1 1:end-1]))/2;
@@ -45,10 +37,18 @@ def make_annet_conv(aif_value):
 
         # res = C - data.ydata;
         return c
-    return myfun_annet_conv
+
+    # Set defaults
+    # Apply user-provided parameters
+    prm = default_parameters() | prmin
+
+    # optimization parameters, initialization
+    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
+
+    return myfun_annet_conv, b0, prm
 
 
-def make_annet_matrix(aif_value):
+def make_annet_matrix(aif_value, b0in, prmin):
     # Construction to pass aif_value to function
     # def myfun_annet_matrix(x, tau, d, fa, k21, k12):
     def myfun_annet_matrix(x, *b):
@@ -102,10 +102,18 @@ def make_annet_matrix(aif_value):
         c = fa * caprime + ck
         # res = C - data.ydata;
         return c
-    return myfun_annet_matrix
+
+    # Set defaults
+    # Apply user-provided parameters
+    prm = default_parameters() | prmin
+
+    # optimization parameters, initialization
+    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
+
+    return myfun_annet_matrix, b0, prm
 
 
-def make_sourbron_conv(aif_value):
+def make_sourbron_conv(aif_value, b0in, prmin):
     # Construction to pass aif_value to function
     # def myfun_sourbron_conv(x, vp, tp, ft, tt):
     def myfun_sourbron_conv(x, *b):
@@ -148,10 +156,18 @@ def make_sourbron_conv(aif_value):
         # ck = ck.reshape(-1, 1)
         c = vp * cp + ck
         return c
-    return myfun_sourbron_conv
+
+    # Set defaults
+    # Apply user-provided parameters
+    prm = default_parameters() | prmin
+
+    # optimization parameters, initialization
+    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
+
+    return myfun_sourbron_conv, b0, prm
 
 
-def make_sourbron_loop(aif_value):
+def make_sourbron_loop(aif_value, b0in, prmin):
     # Construction to pass aif_value to function
     # def myfun_sourbron_loop(x, vp, tp, ft, tt):
     def myfun_sourbron_loop(x, *b):
@@ -201,10 +217,18 @@ def make_sourbron_loop(aif_value):
         # combine model
         c = vp * cp + ft * ck
         return c
-    return myfun_sourbron_loop
+
+    # Set defaults
+    # Apply user-provided parameters
+    prm = default_parameters() | prmin
+
+    # optimization parameters, initialization
+    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
+
+    return myfun_sourbron_loop, b0, prm
 
 
-def make_sourbron_matrix(aif_value):
+def make_sourbron_matrix(aif_value, b0in, prmin):
     # Construction to pass aif_value to function
     # def myfun_sourbron_matrix(x, vp, tp, ft, tt):
     def myfun_sourbron_matrix(x, *b):
@@ -253,10 +277,18 @@ def make_sourbron_matrix(aif_value):
         # combine model
         c = vp * cp + ck
         return c
-    return myfun_sourbron_matrix
+
+    # Set defaults
+    # Apply user-provided parameters
+    prm = default_parameters() | prmin
+
+    # optimization parameters, initialization
+    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
+
+    return myfun_sourbron_matrix, b0, prm
 
 
-def make_sourbron_numint(aif_value):
+def make_sourbron_numint(aif_value, b0in, prmin):
     # Construction to pass aif_value to function
     # def myfun_sourbron_numint(x, vp, tp, ft, tt):
     def myfun_sourbron_numint(x, *b):
@@ -301,4 +333,14 @@ def make_sourbron_numint(aif_value):
         # combine model
         c = vp * cp + ck
         return c
-    return myfun_sourbron_numint
+
+    # Set defaults
+    # Apply user-provided parameters
+    prm = default_parameters() | prmin
+
+    # optimization parameters, initialization
+    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
+
+    return myfun_sourbron_numint, b0, prm
+
+

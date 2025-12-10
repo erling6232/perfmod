@@ -1,37 +1,41 @@
 import os.path
 import numpy as np
 from scipy.optimize import curve_fit
+from imagedata import Series
 from .myfun import make_sourbron_conv, make_sourbron_numint, make_sourbron_matrix, make_sourbron_loop
 
 
-def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=None, prmin=None):
+def fit_curve_voxels(fun: callable,
+                     im: Series,
+                     aif_value, timeline, meanc, volume, hct, b0=None, prm=None
+                     ):
     """MRI-measurement of perfusion and glomerular filtration in the human
     kidney with a separable compartment model. Sourbron SP, Michaely HJ,
     Reiser MF, Schoenberg SO. Invest Radiol. 2008 Jan;43(1):40-8.
     """
 
-    prm = {'vis': False,
-           'savefig': False,
-           'intmethod': 'conv',
-           # 'intmethod': 'matrix',
-           # 'intmethod': 'numint',
-           'loss': 'linear',
-           'f_scale': 1.0,
-           }
+    # prm = {'vis': False,
+    #        'savefig': False,
+    #        'intmethod': 'conv',
+    #        # 'intmethod': 'matrix',
+    #        # 'intmethod': 'numint',
+    #        'loss': 'linear',
+    #        'f_scale': 1.0,
+    #        }
     # handlefig = [];
 
     # optimization parameters, initialization
-    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30}
+    # b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30}
 
-    # input parameters
-    if b0in is not None:
-        for key in b0in.keys():
-            b0[key] = b0in[key]
-
-    # input parameters
-    if prmin is not None:
-        for key in prmin.keys():
-            prm[key] = prmin[key]
+    # # input parameters
+    # if b0in is not None:
+    #     for key in b0in.keys():
+    #         b0[key] = b0in[key]
+    #
+    # # input parameters
+    # if prmin is not None:
+    #     for key in prmin.keys():
+    #         prm[key] = prmin[key]
 
     # account for hematocrit
     # Sourbron 2013, eqs 37-40
@@ -68,20 +72,20 @@ def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=N
     # options = optim_options('lsqcurvefit', 'MaxFunEvals', 1000,'Algorithm','trust-region-reflective')
     # options = {'Algorithm','trust-region-reflective'};
     # options.MaxFunEvals = 4000;
-    if prm['intmethod'] == 'conv':
-        # f = @(b,x)myfun_sourbron_conv(b,x,aif)
-        fun = make_sourbron_conv
-    elif prm['intmethod'] == 'numint':
-        # f = @(b,x)myfun_sourbron_numint(b,x,aif)
-        fun = make_sourbron_numint
-    elif prm['intmethod'] == 'matrix':
-        # f = @(b,x)myfun_sourbron_matrix(b,x,aif)
-        fun = make_sourbron_matrix
-    elif prm['intmethod'] == 'loop':
-        # f = @(b,x)myfun_sourbron_loop(b,x,aif)
-        fun = make_sourbron_loop
-    else:
-        raise ValueError('Unknown optimization method: {}'.format(prm['intmethod']))
+    # if prm['intmethod'] == 'conv':
+    #     # f = @(b,x)myfun_sourbron_conv(b,x,aif)
+    #     fun = make_sourbron_conv
+    # elif prm['intmethod'] == 'numint':
+    #     # f = @(b,x)myfun_sourbron_numint(b,x,aif)
+    #     fun = make_sourbron_numint
+    # elif prm['intmethod'] == 'matrix':
+    #     # f = @(b,x)myfun_sourbron_matrix(b,x,aif)
+    #     fun = make_sourbron_matrix
+    # elif prm['intmethod'] == 'loop':
+    #     # f = @(b,x)myfun_sourbron_loop(b,x,aif)
+    #     fun = make_sourbron_loop
+    # else:
+    #     raise ValueError('Unknown optimization method: {}'.format(prm['intmethod']))
     # initial values of model data and GFR
     # f = np.empty((ntime, nvox), dtype=np.float64)
     f = np.full((ntime, nvox), np.nan, dtype=np.float64)
@@ -91,10 +95,16 @@ def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=N
         'xdata': xdata
     }
 
-    b0in = [b0['vp'], b0['tp'], b0['ft'], b0['tt']]
+    b0in = []
+    for k in b0.keys():
+        b0in.append(b0[k])
+    print('fit_curve_voxels: Initial parameters: {}'.format(b0))
+    print('fit_curve_voxels: Initial parameters: {}'.format(b0in))
+    print('fit_curve_voxels: Lower bounds: {}'.format(lb))
+    print('fit_curve_voxels: Upper bounds: {}'.format(ub))
 
     # prm['vis'] = True
-    b = np.full((4, nvox), np.nan, dtype=np.float64)
+    b = np.full((len(b0in), nvox), np.nan, dtype=np.float64)
     for i in range(nvox):
         print('Voxel {} out of {}'.format(i + 1, nvox))
 
@@ -104,8 +114,10 @@ def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=N
             data['ydata'] = im[:]
 
         # boutls,resnorm,residls = lsqcurvefit(f,b0in,data['xdata'],data['ydata'],lb,ub,options);
-        boutls, pcov = curve_fit(fun(aif), data['xdata'], data['ydata'], p0=b0in, bounds=(lb, ub),
-                                 loss=prm['loss'], f_scale=prm['f_scale'])
+        # boutls, pcov = curve_fit(fun(aif), data['xdata'], data['ydata'], p0=b0in, bounds=(lb, ub),
+        boutls, pcov = curve_fit(fun, data['xdata'], data['ydata'], p0=b0in, bounds=(lb, ub),
+                                 loss=prm['loss'], f_scale=prm['f_scale'],
+                                 verbose=1)
         # perr = np.sqrt(np.diag(pcov))  # One standard deviation
 
         # nonlinear fit, gives completely another result, and highly varying!!!
@@ -115,9 +127,11 @@ def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=N
         b[:, i] = boutls
 
         print('Obtained parameters: {}'.format(boutls))
+        print('Obtained parameters: {}'.format(b))
 
         # compute the response function
-        compute = fun(aif)
+        # compute = fun(aif)
+        compute = fun(timeline, *boutls)
         # if prm['intmethod'] == 'conv':
         #     compute = myfun_sourbron_conv(boutls, data['xdata'], aif)
         # elif prm['intmethod'] == 'numint':
@@ -135,10 +149,11 @@ def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=N
 
         # here in ml/min
         # boutls = ['vp', 'tp', 'ft', 'tt']
-        gfr[i] = convert_gfr(boutls[2], volume)
+        # gfr[i] = convert_gfr(boutls[2], volume)
 
         # function value
-        f[:, i] = compute(data['xdata'], boutls[0], boutls[1], boutls[2], boutls[3])
+        # f[:, i] = compute(data['xdata'], boutls[0], boutls[1], boutls[2], boutls[3])
+        f[:, i] = compute
 
         # new initial values
         b0in = np.nanmean(b[:, 0:i + 1], axis=1)
@@ -149,6 +164,7 @@ def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=N
     out = {'vp': b[0], 'tp': b[1], 'ft': b[2], 'tt': b[3]}
 
     out['fitted'] = f
+    out['b'] = b.copy()
     # ROI volume
     out['roivol'] = np.sum(vol)
     out['roivolunit'] = 'ml'
@@ -183,7 +199,7 @@ def fit_curve_voxel_sourbron(im, aif_value, timeline, meanc, volume, hct, b0in=N
     out['handlefig'] = handlefig
 
     print('Total ROI volume (ml): {:0.1f}'.format(out['roivol']))
-    print('GFR (ml/min): {:0.1f}'.format(out['gfr']))
+    # print('GFR (ml/min): {:0.1f}'.format(out['gfr']))
     print('Plasma flow (ml/min/100ml): {:0.1f}'.format(out['fp']))
     print('RBF (ml/min/100ml): {:0.1f}'.format(out['rbf']))
     print('Blood flow (ml/min): {:0.1f}'.format(out['BF']))

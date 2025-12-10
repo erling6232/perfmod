@@ -1,48 +1,54 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from .fit_curve_voxels import fit_curve_voxel_sourbron
-from .aif import parker, find_delay
+from collections import defaultdict
+from imagedata import Series
+from .fit_curve_voxels import fit_curve_voxels
+from .myfun import make_annet_conv, make_sourbron_conv  # , make_patlak
+from .models.gctt import make_gctt
+# from .C_fitted import make_C_fitted, make_C_fitted_delay_minus_y_T1, make_C_fitted_delay_T1
+from .aif.parker import parker
+from .aif.find_delay import find_delay
 
+import matplotlib.pyplot as plt
+from show import show
 
-def fit_curves(im, method, aif_mask, roi_mask, h=None, timeline_data=None,
-               im_aif=None, timeline_aif=None, prmin=None, b0in=None, timeline=None, hematocrit=0.40,
-               voxel_volume=None):
-    """Find GFR of kidney data
+def fit_curves(im: Series, method: str,
+               aif_mask: Series = None,
+               roi_mask: Series = None,
+               h: np.ndarray = None,
+               timeline_data: np.ndarray = None,
+               im_aif: np.ndarray | Series = None,
+               timeline_aif: np.ndarray = None,
+               prmin: dict = None,
+               b0in: dict = None,
+               timeline: np.ndarray = None,
+               hematocrit: float = 0.40,
+               voxel_volume: float = None) -> dict:
+    """Calculate perfusion curves from MR images.
     """
 
-    # prm['dtimeline'] = 3;
-    prm = {'red': False,
-           'meanc': True,
-           'collapse': False,
-           'initializepatlak': False,
-           'optmethod': 'lsqcurvefit',
-           'gammafunc': False,
-           'lower_bounds': (0, 1, 0, 0),
-           'upper_bounds': (0.9, 50, 0.5, 300),
+    assert im is not None, 'No image provided'
+    assert method is not None, 'No method provided'
+    assert hematocrit >= 0 and hematocrit <= 1, 'Hematocrit must be between 0 and 1'
+    assert im.axes[0].name == 'time', 'Image must be time series'
 
-           # Saving figure?
-           'savefig': False,
-
-           # Integration method
-           # prm['intmethod'] = 'matrix';
-           'intmethod': 'conv',
-           # prm['intmethod'] = 'numint';
-           # 'intmethod': 'loop',
-           'loss': 'linear',
-           'f_scale': 1.0,
-           }
-
-    # input variables
-    # prm = mergeinputpar(prm,prmin);
-    if prmin is not None:
-        for key in prmin.keys():
-            prm[key] = prmin[key]
+    # input variables - default values
+    if prmin is None:
+        prmin = {}
+    prmin = {'aif_method': 'individual', 'aif_normalization_method': 'max', 'meanc': False} | prmin
+    # initial parameters
+    if b0in is None:
+        b0in = {}
 
     if im.ndim > 1:
-        assert aif_mask.ndim == 3, "Wrong AIF ROI dimension {}".format(aif_mask.ndim)
-        assert roi_mask.ndim == 3, "Wrong tissue ROI dimension {}".format(roi_mask.ndim)
-        aif_mask = aif_mask > 0
-        roi_mask = roi_mask > 0
+        if aif_mask is not None:
+            assert aif_mask.ndim <= im.ndim, "Wrong AIF ROI dimension {}, expected {}".format(
+                aif_mask.ndim, im.ndim)
+            aif_mask = aif_mask > 0
+        if roi_mask is not None:
+            assert roi_mask.ndim <= im.ndim, "Wrong tissue ROI dimension {}, expected {}".format(
+                roi_mask.ndim, im.ndim)
+            roi_mask = roi_mask > 0
 
         # aif image
         if im_aif is None:
@@ -57,19 +63,15 @@ def fit_curves(im, method, aif_mask, roi_mask, h=None, timeline_data=None,
         timeline_aif = timeline
     else:
         timeline = timeline_data
+    assert np.all(timeline_data == timeline_aif), "Timelines do not match"
 
-    # initial parameters
-    if b0in is None:
-        b0in = {}
-
-    print('Parameters in fit_curves:\n{}'.format(prm))
+    print('Parameters in fit_curves:\n{}'.format(prmin))
     if h is None:
         h = im.spacing
-
-    print('Using method {}'.format(method))
+    assert len(h) == 3, "Wrong image spacing {}".format(h)
 
     # reduce size?
-    # if prm['red']
+    # if prmin['red']
     #    [im,h] = redimagesize(im,h,'linear');
     #    [im_aif,h] = redimagesize(im_aif,h,'linear');
     #    dim = size(im);
@@ -82,9 +84,9 @@ def fit_curves(im, method, aif_mask, roi_mask, h=None, timeline_data=None,
     resample_aif = False
     # Use user-defined, fixed spacing of timeline
     if timeline is not None:
-        if (timeline != timeline_data).all():
+        if not np.all(timeline == timeline_data):
             resample_data = True
-        if (timeline != timeline_aif).all():
+        if not np.all(timeline == timeline_aif):
             resample_aif = True
 
     if resample_data:
@@ -116,33 +118,37 @@ def fit_curves(im, method, aif_mask, roi_mask, h=None, timeline_data=None,
     # make column vector for gamma fit
     # timeline = timeline.reshape((timeline.shape[0], 1))
 
-    if prm['gammafunc']:
-        try:
-            raise ValueError('gammafunc not implemented')
-            # beta0 = [3, 1.5, 70, 20, 10]
-            # timeline_fit = timeline - min(timeline)
-            # beta = nlinfit(timeline_fit,aif_value,@kidney.gammafunc,beta0)
-            # y = kidney.gammafunc(beta, timeline_fit)
-            # plot(timeline,y);hold on;plot(timeline,aif_value,'-r');hold off
-            aif_value = y
-        except Exception as e:
-            raise ValueError('WARNING: Could not generate a gamma variate: {}'.format(e))
-    elif prm['aif_method'] == 'parker':
-        aif_model = parker(prm['parker_parameters'], len(timeline_aif), timeline / 60)
-        print('Normalization method for Parker: {}'.format(prm['aif_normalization_method']))
-    elif prm['aif_method'] == 'average':
-        aif_model = prm['average_aif']
-        print('Normalization method for average AIF: {}'.format(prm['aif_normalization_method']))
-    else:
-        aif_model = aif_value
+    aif_model = aif_value
+    match prmin['aif_method']:
+        case 'gammafunc':
+            try:
+                raise ValueError('gammafunc not implemented')
+                # beta0 = [3, 1.5, 70, 20, 10]
+                # timeline_fit = timeline - min(timeline)
+                # beta = nlinfit(timeline_fit,aif_value,@kidney.gammafunc,beta0)
+                # y = kidney.gammafunc(beta, timeline_fit)
+                # plot(timeline,y);hold on;plot(timeline,aif_value,'-r');hold off
+                aif_value = y
+            except Exception as e:
+                raise ValueError('WARNING: Could not generate a gamma variate: {}'.format(e))
+        case 'parker':
+            aif_model = parker(prmin['parker_parameters'], len(timeline_aif), timeline / 60)
+            print('Normalization method for Parker: {}'.format(prmin['aif_normalization_method']))
+        case 'average':
+            aif_model = prmin['average_aif']
+            print('Normalization method for average AIF: {}'.format(prmin['aif_normalization_method']))
+        case 'individual':
+            aif_model = aif_value
+        case '_':
+            raise ValueError('Unknown AIF method: {}'.format(prmin['aif_method']))
     # if prm['aif_method'] in ['parker', 'average']:
-    aif_matched, norm_coeff = normalize_aif(aif_model, aif_value, prm['aif_normalization_method'])
+    aif_matched, norm_coeff = normalize_aif(aif_model, aif_value, prmin['aif_normalization_method'])
     print('Normalization coefficient: {}'.format(norm_coeff))
 
     if im.ndim > 1:
         # new dimension of image
         # dim = im.ndim
-        dim3 = im.shape[1:]
+        dim3 = im.shape[-3:]
 
         # reshape the data to n x t matrix to only optimize in the kidney region, to
         # save time
@@ -154,11 +160,6 @@ def fit_curves(im, method, aif_mask, roi_mask, h=None, timeline_data=None,
         imini = im
         img = im
 
-    out = {'handle': [],
-           'norm_coeff': norm_coeff
-           }
-    # initialize by the Patlak model
-
     if voxel_volume is None:
         voxel_volume = np.prod(h)
     # volume = ones(nnz(roi_mask),1)*voxel_volume;
@@ -167,47 +168,51 @@ def fit_curves(im, method, aif_mask, roi_mask, h=None, timeline_data=None,
         volume = voxel_volume * len(roi_mask.nonzero()[0])
     else:
         volume = voxel_volume
-    if method == 'annet':
-        # prm_model['option'] = prm['option']
-        prm_model['upper_bounds'] = prm['upper_bounds']
-        prm_model['lower_bounds'] = prm['lower_bounds']
-        prm_model['k21'] = prm['k21']
-        prm_model['optmethod'] = prm['optmethod']
 
-        # initialize fa and k21 by patlak model
-        # if prm['initializepatlak']
-        #     msg = ['Initializing by the Patlak model'];
-        #     disp(msg);
-        #     [outi.k21,outi.fa,outi.c,outi.im,outi.aif_value,outi.gfr] = kidney.fitcurvepatlak(im,aif_value,timeline,prm['meanc'],roi_mask,prm_model);
-        #     v = min(outi.fa(1),0.3);
-        #     v = max(v,0.1);
-        #     b0in.fa = v;
-        #     b0in.k21 = outi.k21(1);
-        #     msg = ['Obtained parameters'];
-        #     disp(msg);
-        #     b0in
-        # end;
-        # run the annet model
-        out = kidney.fit_curve_voxel_annet(
-            img, aif_matched, timeline, prm['meanc'], volume, hematocrit, b0in, prm_model
-        )
-    elif method == 'sourbron':
-        prm_model['upper_bounds'] = prm['upper_bounds']
-        prm_model['lower_bounds'] = prm['lower_bounds']
-        prm_model['savefig'] = prm['savefig']
-        prm_model['intmethod'] = prm['intmethod']
-        prm_model['loss'] = prm['loss']
-        prm_model['f_scale'] = prm['f_scale']
-        out = fit_curve_voxel_sourbron(
-            # img, aif_value, timeline, prm['meanc'], volume, hematocrit, b0in, prm_model
-            img, aif_matched, timeline, False, volume, hematocrit, b0in, prm_model
-        )
-    elif method == 'patlak':
-        prm_model = {'meanc': prm['meanc']}
-        # prm_model['timepatlak'] = prm['timepatlak']
-        out.k21, out.fa, out.c, out.im, out.aif_value, out.gfr = kidney.fit_curve_patlak(
-            img, aif_matched, timeline_resample, prm['meanc'], roi_mask, prm_model
-        )
+    print('Using method {}'.format(method))
+    methods = defaultdict(lambda *args: lambda *a: 'Invalid method', {
+        'annet': make_annet_conv,
+        'sourbron': make_sourbron_conv,
+        # 'patlak': make_patlak,
+        'gctt': make_gctt,  # make_C_fitted_delay_T1,  # make_C_fitted_delay_minus_y_T1,
+    })
+    prmin['method'] = method
+    print(f'fit_curves: b0in={b0in}')
+    fun, b0, prm_model = methods[method](aif_matched, b0in, prmin)
+    print(f'fit_curves: b0={b0}')
+
+    # prm_model = {'vis': prm['vis']}
+    out = {'handle': [],
+           'norm_coeff': norm_coeff
+           }
+
+    # img, norm_coeff_img = normalize_aif(img, img, prmin['aif_normalization_method'])
+    img = img * norm_coeff
+    fig, ax = plt.subplots(2, 2)
+    # curve = np.sum(img, axis=(1, 2, 3), where=roi_mask == 1) / np.count_nonzero(roi_mask == 1)
+    show(img, ax=ax[0, 0], show=False, label='tissue')
+    # curve = np.sum(img, axis=(1, 2, 3), where=aif_mask == 1) / np.count_nonzero(aif_mask == 1)
+    show(aif_model, ax=ax[0, 1], show=False, label='aif model')
+    # show(curve, ax=ax[0, 1], show=False, label='aif roi')
+    show(aif_matched, ax=ax[1, 0], show=False, label='aif matched')
+    b0tt = []
+    for k in b0.keys():
+        b0tt.append(b0[k])
+    #curve = np.zeros_like(img)
+    #for i, t in enumerate(timeline):
+    curve = fun(timeline, *b0tt)
+    print('curve: ', curve.shape)
+    show(curve, ax=ax[1, 1], show=True, label='GCTT')
+
+    # initialize by the Patlak model
+
+    print('Fitting curves...')
+    print('img[0], aif_matched[0]: ', img[0], aif_matched[0])
+    out = out | fit_curve_voxels(fun,
+        img, aif_matched, timeline, prm_model['meanc'], volume, hematocrit, b0=b0, prm=prm_model
+    )
+
+    out['fun'] = fun
     out['timeline'] = timeline
     # out['ind'] = find(roi_mask)
     out['dim3'] = dim3
@@ -236,7 +241,9 @@ def fit_curves(im, method, aif_mask, roi_mask, h=None, timeline_data=None,
 #    hnew = h*p;
 
 
-def normalize_aif(model, value, normalization_method='auc'):
+def normalize_aif(model: Series | np.ndarray,
+                  value: Series | np.ndarray,
+                  normalization_method: str = 'auc') -> Series | np.ndarray:
     if normalization_method == 'auc':
         norm_coeff = np.sum(value) / np.sum(model)
         # model = model * np.sum(value) / np.sum(model)
