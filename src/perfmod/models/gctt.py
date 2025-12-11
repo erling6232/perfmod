@@ -24,6 +24,7 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         alfa = (1 / alfainv)
         tau = Tc / alfa
         kep = (E * F) / ve
+        assert (1 / tau - kep) >= 0, "gammaincc(.., 1/tau - kep) is negative"
 
         Hv = sc.gammaincc(alfa, x / tau)
         Hp = ((E * np.exp(-kep * x)) / (pow((1 - kep * tau), alfa))) * \
@@ -84,6 +85,7 @@ def make_gctt_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         alfa = (1 / alfainv)
         tau = Tc / alfa
         kep = (E * F) / ve
+        assert (1 / tau - kep) >= 0, "gammaincc(.., 1/tau - kep) is negative"
 
         Hv = sc.gammaincc(alfa, x / tau)
         Hp = ((E * np.exp(-kep * x)) / (pow((1 - kep * tau), alfa))) * \
