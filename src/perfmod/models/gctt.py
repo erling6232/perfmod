@@ -6,8 +6,8 @@ from . import default_parameters
 def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # def myfun_gctt(x, F, E, ve, Tc, alphainv, delay)
 
-    def gctt(x, *b):
-        """h = GCTT(x, b), where b = [F E ve Tc alfainv]
+    def gctt(t, *b):
+        """h = GCTT(t, b), where b = [F E ve Tc alfainv]
         Model based on
         Schabel, M. C. (2012). A unified impulse response model for DCE-MRI. Magnetic Resonance in Medicine, 68(5), 1632�1646. http://doi.org/10.1002/mrm.24162
 
@@ -19,16 +19,16 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         """
 
         F, E, ve, Tc, alfainv = b
-        x = x.copy() / 60.
+        t = t.copy() / 60.
 
         alfa = (1 / alfainv)
         tau = Tc / alfa
         kep = (E * F) / ve
         assert (1 / tau - kep) >= 0, "gammaincc(.., 1/tau - kep) is negative"
 
-        Hv = sc.gammaincc(alfa, x / tau)
-        Hp = ((E * np.exp(-kep * x)) / (pow((1 - kep * tau), alfa))) * \
-              (1 - sc.gammaincc(alfa, (1 / tau - kep) * x))
+        Hv = sc.gammaincc(alfa, t / tau)
+        Hp = ((E * np.exp(-kep * t)) / (pow((1 - kep * tau), alfa))) * \
+              (1 - sc.gammaincc(alfa, (1 / tau - kep) * t))
 
         h = Hv + Hp
         h = np.convolve(h * F, aif_value, mode='same')
@@ -66,8 +66,8 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 def make_gctt_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # def myfun_gctt(x, F, E, ve, Tc, alphainv, delay)
 
-    def gctt(x, *b):
-        """h = GCTT(x, b), where b = [F E ve Tc alfainv delay]
+    def gctt(t, *b):
+        """h = GCTT(t, b), where b = [F E ve Tc alfainv delay]
         Model based on
         Schabel, M. C. (2012). A unified impulse response model for DCE-MRI. Magnetic Resonance in Medicine, 68(5), 1632�1646. http://doi.org/10.1002/mrm.24162
 
@@ -80,16 +80,16 @@ def make_gctt_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         """
 
         F, E, ve, Tc, alfainv, delay = b
-        x = x.copy() / 60. + delay
+        t = t.copy() / 60. + delay
 
         alfa = (1 / alfainv)
         tau = Tc / alfa
         kep = (E * F) / ve
         assert (1 / tau - kep) >= 0, "gammaincc(.., 1/tau - kep) is negative"
 
-        Hv = sc.gammaincc(alfa, x / tau)
-        Hp = ((E * np.exp(-kep * x)) / (pow((1 - kep * tau), alfa))) * \
-             (1 - sc.gammaincc(alfa, (1 / tau - kep) * x))
+        Hv = sc.gammaincc(alfa, t / tau)
+        Hp = ((E * np.exp(-kep * t)) / (pow((1 - kep * tau), alfa))) * \
+             (1 - sc.gammaincc(alfa, (1 / tau - kep) * t))
 
         h = Hv + Hp
         h = np.convolve(h * F, aif_value, mode='same')
