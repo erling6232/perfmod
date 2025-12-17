@@ -5,12 +5,15 @@ from imagedata import Series
 from .fit_curve_voxels import fit_curve_voxels
 from .myfun import make_annet_conv, make_sourbron_conv  # , make_patlak
 from .models.gctt import make_gctt, make_gctt_delay
+from .models.tofts import make_tofts_delay
+from .models.annet import make_annet_delay
 # from .C_fitted import make_C_fitted, make_C_fitted_delay_minus_y_T1, make_C_fitted_delay_T1
 from .aif.parker import parker
 from .aif.find_delay import find_delay
 
 import matplotlib.pyplot as plt
 from show import show
+
 
 def fit_curves(im: Series, method: str,
                aif_mask: Series = None,
@@ -132,7 +135,7 @@ def fit_curves(im: Series, method: str,
             except Exception as e:
                 raise ValueError('WARNING: Could not generate a gamma variate: {}'.format(e))
         case 'parker':
-            aif_model = parker(prmin['parker_parameters'], len(timeline_aif), timeline / 60)
+            aif_model = parker(prmin['parker_parameters'], len(timeline_aif), timeline)  #  / 60)
             print('Normalization method for Parker: {}'.format(prmin['aif_normalization_method']))
         case 'average':
             aif_model = prmin['average_aif']
@@ -171,10 +174,11 @@ def fit_curves(im: Series, method: str,
 
     print('Using method {}'.format(method))
     methods = defaultdict(lambda *args: lambda *a: 'Invalid method', {
-        'annet': make_annet_conv,
+        'annet': make_annet_delay,
         'sourbron': make_sourbron_conv,
         # 'patlak': make_patlak,
         'gctt': make_gctt_delay,  # make_C_fitted_delay_T1,  # make_C_fitted_delay_minus_y_T1,
+        'tofts': make_tofts_delay,
     })
     prmin['method'] = method
     print(f'fit_curves: b0in={b0in}')
@@ -190,19 +194,18 @@ def fit_curves(im: Series, method: str,
     img = img * norm_coeff
     fig, ax = plt.subplots(2, 2)
     # curve = np.sum(img, axis=(1, 2, 3), where=roi_mask == 1) / np.count_nonzero(roi_mask == 1)
-    show(img, ax=ax[0, 0], show=False, label='tissue')
+    show(img, ax=ax[0, 0], show=False, label='tissue data')
+    show(aif_value, ax=ax[0, 0], show=False, label='aif data')
     # curve = np.sum(img, axis=(1, 2, 3), where=aif_mask == 1) / np.count_nonzero(aif_mask == 1)
     show(aif_model, ax=ax[0, 1], show=False, label='aif model')
     # show(curve, ax=ax[0, 1], show=False, label='aif roi')
     show(aif_matched, ax=ax[1, 0], show=False, label='aif matched')
-    b0tt = []
-    for k in b0.keys():
-        b0tt.append(b0[k])
+    b0tt = [b0[_] for _ in prm_model['parameters']]
     #curve = np.zeros_like(img)
     #for i, t in enumerate(timeline):
     curve = fun(timeline, *b0tt)
     print('curve: ', curve.shape)
-    show(curve, ax=ax[1, 1], show=True, label='GCTT')
+    show(curve, ax=ax[1, 1], show=True, label=method)
 
     # initialize by the Patlak model
 
@@ -244,17 +247,18 @@ def fit_curves(im: Series, method: str,
 def normalize_aif(model: Series | np.ndarray,
                   value: Series | np.ndarray,
                   normalization_method: str = 'auc') -> Series | np.ndarray:
-    if normalization_method == 'auc':
-        norm_coeff = np.sum(value) / np.sum(model)
-        # model = model * np.sum(value) / np.sum(model)
-    elif normalization_method == 'max':
-        norm_coeff = np.max(value) / np.max(model)
-        # model = model * np.max(value) / np.max(model)
-    elif normalization_method == 'unity':  # unity
-        norm_coeff = 1.0 / np.max(model)
-        # model = model / np.max(model)
-    else:
-        raise ValueError('Unknown normalization method: {}'.format(normalization_method))
+    match normalization_method:
+        case 'auc':
+            norm_coeff = np.sum(value) / np.sum(model)
+            # model = model * np.sum(value) / np.sum(model)
+        case 'max':
+            norm_coeff = np.max(value) / np.max(model)
+            # model = model * np.max(value) / np.max(model)
+        case 'unity':  # unity
+            norm_coeff = 1.0 / np.max(model)
+            # model = model / np.max(model)
+        case '_':
+            raise ValueError('Unknown normalization method: {}'.format(normalization_method))
     model = model * norm_coeff
     delay = find_delay(value, model)
     matched = np.zeros_like(model)

@@ -40,7 +40,8 @@ classifiers = [
 dependencies = [
     "setuptools",
     "imagedata>=3.8.14,<4",
-    "numpy"
+    "numpy",
+    "scipy>=1.16.0"
 ]
 
 [project.urls]
