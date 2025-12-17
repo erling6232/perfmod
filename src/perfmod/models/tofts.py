@@ -19,6 +19,7 @@ def make_tofts_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         dt = t[2] - t[1]
         aif_shifted = ndimage.shift(aif_value, delay / dt, mode='nearest')
         print('tofts: ktrans {} ve {} td {}'.format(ktrans, ve, delay))
+        aif_shifted = aif_value
 
         # kep = ktrans/ve
         h = ktrans * np.exp(-ktrans/ve * t)
