@@ -2,7 +2,7 @@ import numpy as np
 from . import default_parameters
 
 
-def make_annet_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
+def make_annet(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # Construction to pass aif_value to function
 
     def annet(x, *b):
@@ -13,7 +13,7 @@ def make_annet_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         # fa  = b(3);
         # k21 = b(4);
         # k12 = b(5);
-        tau, d, fa, k21, k12, delay = b
+        tau, d, fa, k21, k12 = b
 
         # ntime = numel(x);
         # ntime = np.prod(x.size).item()
@@ -45,18 +45,18 @@ def make_annet_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         return c
 
     # Set defaults
-    # tau, d, fa, k21, k12, delay
+    # tau, d, fa, k21, k12
     prm = default_parameters()
     # prm['x_scale'] = np.array([0.1, 1, 1, 1, 1, 1])  # [10 1 10 1 10];
     prm['x_scale'] = None
-    prm['lower_bounds'] = np.array([-np.inf, 0, 0, 0, 0, -1.5])  # -10])
-    prm['upper_bounds'] = np.array([np.inf, np.inf, 1, np.inf, np.inf, 1.5])  # 30])
+    prm['lower_bounds'] = np.array([-np.inf, 0, 0, 0, 0])  # -10])
+    prm['upper_bounds'] = np.array([np.inf, np.inf, 1, np.inf, np.inf])  # 30])
 
     # optimization parameters, initialization
-    b0 = {'tau': 0.1, 'd': 0.1, 'fa': 0.1, 'k21': 0.1, 'k12': 0.9, 'delay': 0.}
-    prm['parameters'] = ['tau', 'd', 'fa', 'k21', 'k12', 'delay']
-    prm['units'] = {'F': 'ml/ml/min', 'E': None, 've': 'ml/ml/min', 'Tc': 'min',
-                    'alphainv': None, 'delay': 'min'};
+    b0 = {'tau': 0.1, 'd': 0.1, 'fa': 0.1, 'k21': 0.1, 'k12': 0.9}
+    prm['parameters'] = ['tau', 'd', 'fa', 'k21', 'k12']
+    prm['units'] = {'tau': 'min', 'd': None, 'fa': None, 'k21': 'mL/min',
+                    'k12': 'mL/min'};
 
     # Apply user-provided parameters
     prm = prm | prmin
