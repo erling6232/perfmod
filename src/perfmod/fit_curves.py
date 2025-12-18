@@ -12,7 +12,6 @@ from .aif.parker import parker
 from .aif.find_delay import find_delay
 
 import matplotlib.pyplot as plt
-from show import show
 
 
 def fit_curves(im: Series, method: str,
