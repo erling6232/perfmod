@@ -24,6 +24,8 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install check-manifest flake8
         check-manifest
+    - name: flake8
+      run: |
         flake8 .
     - name: Install dependencies
       run: |
