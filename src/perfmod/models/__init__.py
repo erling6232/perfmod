@@ -5,10 +5,8 @@ def default_parameters() -> dict:
         'meanc': True,
         'collapse': False,
         'initializepatlak': False,
-        'optmethod': 'lsqcurvefit',
+        'optmethod': 'curve_fit',  # 'least_squares'
         'gammafunc': False,
-        'lower_bounds': (0, 1, 0, 0),
-        'upper_bounds': (0.9, 50, 0.5, 300),
         'k21': 0.001,
 
         # Saving figure?
@@ -20,5 +18,6 @@ def default_parameters() -> dict:
         # prm['intmethod'] = 'numint';
         # 'intmethod': 'loop',
         'loss': 'linear',
+        'x_scale': None,
         'f_scale': 1.0,
     }

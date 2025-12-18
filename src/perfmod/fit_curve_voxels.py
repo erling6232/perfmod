@@ -1,8 +1,15 @@
 import os.path
 import numpy as np
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, least_squares
 from imagedata import Series
 from .myfun import make_sourbron_conv, make_sourbron_numint, make_sourbron_matrix, make_sourbron_loop
+
+
+def difference(x, *args, **kwargs):
+    fun, t, y = args
+    f = fun(t, *x)
+    d = f - y
+    return d
 
 
 def fit_curve_voxels(fun: callable,
@@ -62,11 +69,11 @@ def fit_curve_voxels(fun: callable,
     try:
         lb = prm['lower_bounds']
     except KeyError:
-        lb = (0, 0, 0, 0)
+        lb = [-np.inf for _ in range(len(b0))]
     try:
         ub = prm['upper_bounds']
     except KeyError:
-        ub = (1, 30, 0.020, 100)
+        lb = [np.inf for _ in range(len(b0))]
 
     # Optimization method
     # options = optim_options('lsqcurvefit', 'MaxFunEvals', 1000,'Algorithm','trust-region-reflective')
@@ -95,9 +102,7 @@ def fit_curve_voxels(fun: callable,
         'xdata': xdata
     }
 
-    b0in = []
-    for k in b0.keys():
-        b0in.append(b0[k])
+    b0in = [b0[_] for _ in prm['parameters']]
     print('fit_curve_voxels: Initial parameters: {}'.format(b0))
     print('fit_curve_voxels: Initial parameters: {}'.format(b0in))
     print('fit_curve_voxels: Lower bounds: {}'.format(lb))
@@ -113,12 +118,24 @@ def fit_curve_voxels(fun: callable,
         else:
             data['ydata'] = im[:]
 
-        # boutls,resnorm,residls = lsqcurvefit(f,b0in,data['xdata'],data['ydata'],lb,ub,options);
-        # boutls, pcov = curve_fit(fun(aif), data['xdata'], data['ydata'], p0=b0in, bounds=(lb, ub),
-        boutls, pcov = curve_fit(fun, data['xdata'], data['ydata'], p0=b0in, bounds=(lb, ub),
-                                 loss=prm['loss'], f_scale=prm['f_scale'],
-                                 verbose=1)
-        # perr = np.sqrt(np.diag(pcov))  # One standard deviation
+        match prm['optmethod']:
+            case 'curve_fit':
+                # boutls,resnorm,residls = lsqcurvefit(f,b0in,data['xdata'],data['ydata'],lb,ub,options);
+                # boutls, pcov = curve_fit(fun(aif), data['xdata'], data['ydata'], p0=b0in, bounds=(lb, ub),
+                boutls, pcov = curve_fit(fun, data['xdata'], data['ydata'],
+                                         p0=b0in, bounds=(lb, ub),
+                                         x_scale=prm['x_scale'],
+                                         loss=prm['loss'], f_scale=prm['f_scale'],
+                                         verbose=1)
+                # perr = np.sqrt(np.diag(pcov))  # One standard deviation
+            case 'least_squares':
+                # fun_diff = make_difference(fun, data['xdata'], data['ydata'], aif_value)
+                # least_squares(fun_diff, data['xdata'], data['ydata'],)
+                result = least_squares(difference, b0in, bounds=(lb, ub),
+                                       args=(fun, data['xdata'], data['ydata'])
+                                       )
+                boutls = result.x
+                # pcov = result.cov
 
         # nonlinear fit, gives completely another result, and highly varying!!!
         # boutnl = nlinfit(data.xdata,data.ydata,f,b0(i,:));
@@ -161,7 +178,9 @@ def fit_curve_voxels(fun: callable,
     # From mm³ to ml
     vol = volume * 1e-3
 
-    out = {'vp': b[0], 'tp': b[1], 'ft': b[2], 'tt': b[3]}
+    out = {}
+    for _, key in enumerate(prm['parameters']):
+        out[key] = b[_][0]
 
     out['fitted'] = f
     out['b'] = b.copy()
@@ -171,26 +190,26 @@ def fit_curve_voxels(fun: callable,
 
     # Account for hematocrit
     # Sourbron 2013, eqs 37-40
-    out['fp'] = np.divide(out['vp'], out['tp']).item()
-    out['bv'] = (out['vp'] / (1 - hct)).item()
-    out['rbf'] = out['fp'] / (1 - hct)
+    #out['fp'] = np.divide(out['vp'], out['tp']).item()
+    #out['bv'] = (out['vp'] / (1 - hct)).item()
+    #out['rbf'] = out['fp'] / (1 - hct)
 
     # Filtration fraction
-    out['FF'] = (out['ft'] / out['fp']).item()
+    #out['FF'] = (out['ft'] / out['fp']).item()
 
     # Single kidney blood flow
-    out['BF'] = out['rbf'] * out['roivol'] * 60
-    out['BFunit'] = 'ml/min'
+    #out['BF'] = out['rbf'] * out['roivol'] * 60
+    #out['BFunit'] = 'ml/min'
 
     # Units ml/min/100ml
 
     # Fb
-    out['rbf'] = out['rbf'] * 60 * 100
-    out['rbfunit'] = 'ml/min/100ml'
+    #out['rbf'] = out['rbf'] * 60 * 100
+    #out['rbfunit'] = 'ml/min/100ml'
 
     # Fp
-    out['fp'] = out['fp'] * 60 * 100
-    out['fpunit'] = 'ml/min/100ml'
+    #out['fp'] = out['fp'] * 60 * 100
+    #out['fpunit'] = 'ml/min/100ml'
 
     if im.ndim > 1:
         out['res'] = np.nanmean(np.power((im - f), 2)).item()
@@ -198,10 +217,10 @@ def fit_curve_voxels(fun: callable,
         out['res'] = np.nanmean(np.power((im - f[:, 0]), 2)).item()
     out['handlefig'] = handlefig
 
-    print('Total ROI volume (ml): {:0.1f}'.format(out['roivol']))
+    #print('Total ROI volume (ml): {:0.1f}'.format(out['roivol']))
     # print('GFR (ml/min): {:0.1f}'.format(out['gfr']))
-    print('Plasma flow (ml/min/100ml): {:0.1f}'.format(out['fp']))
-    print('RBF (ml/min/100ml): {:0.1f}'.format(out['rbf']))
-    print('Blood flow (ml/min): {:0.1f}'.format(out['BF']))
-    print('Filtration fraction: {:0.3f}'.format(out['FF']))
+    #print('Plasma flow (ml/min/100ml): {:0.1f}'.format(out['fp']))
+    #print('RBF (ml/min/100ml): {:0.1f}'.format(out['rbf']))
+    #print('Blood flow (ml/min): {:0.1f}'.format(out['BF']))
+    #print('Filtration fraction: {:0.3f}'.format(out['FF']))
     return out
