@@ -5,7 +5,7 @@ from imagedata import Series
 from .fit_curve_voxels import fit_curve_voxels
 from .myfun import make_annet_conv, make_sourbron_conv  # , make_patlak
 from .models.gctt import make_gctt, make_gctt_delay
-from .models.tofts import make_tofts_delay
+from .models.tofts import make_tofts
 from .models.annet import make_annet
 # from .C_fitted import make_C_fitted, make_C_fitted_delay_minus_y_T1, make_C_fitted_delay_T1
 from .aif.parker import parker
@@ -178,7 +178,7 @@ def fit_curves(im: Series, method: str,
         'sourbron': make_sourbron_conv,
         # 'patlak': make_patlak,
         'gctt': make_gctt_delay,  # make_C_fitted_delay_T1,  # make_C_fitted_delay_minus_y_T1,
-        'tofts': make_tofts_delay,
+        'tofts': make_tofts,
     })
     prmin['method'] = method
     print(f'fit_curves: b0in={b0in}')
@@ -194,18 +194,18 @@ def fit_curves(im: Series, method: str,
     img = img * norm_coeff
     fig, ax = plt.subplots(2, 2)
     # curve = np.sum(img, axis=(1, 2, 3), where=roi_mask == 1) / np.count_nonzero(roi_mask == 1)
-    show(img, ax=ax[0, 0], show=False, label='tissue data')
-    show(aif_value, ax=ax[0, 0], show=False, label='aif data')
+    # show(img, ax=ax[0, 0], show=False, label='tissue data')
+    # show(aif_value, ax=ax[0, 0], show=False, label='aif data')
     # curve = np.sum(img, axis=(1, 2, 3), where=aif_mask == 1) / np.count_nonzero(aif_mask == 1)
-    show(aif_model, ax=ax[0, 1], show=False, label='aif model')
+    # show(aif_model, ax=ax[0, 1], show=False, label='aif model')
     # show(curve, ax=ax[0, 1], show=False, label='aif roi')
-    show(aif_matched, ax=ax[1, 0], show=False, label='aif matched')
-    b0tt = [b0[_] for _ in prm_model['parameters']]
+    # show(aif_matched, ax=ax[1, 0], show=False, label='aif matched')
+    # b0tt = [b0[_] for _ in prm_model['parameters']]
     #curve = np.zeros_like(img)
     #for i, t in enumerate(timeline):
-    curve = fun(timeline, *b0tt)
-    print('curve: ', curve.shape)
-    show(curve, ax=ax[1, 1], show=True, label=method)
+    # curve = fun(timeline, *b0tt)
+    # print('curve: ', curve.shape)
+    # show(curve, ax=ax[1, 1], show=True, label=method)
 
     # initialize by the Patlak model
 
