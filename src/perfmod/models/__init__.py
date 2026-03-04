@@ -2,6 +2,8 @@ def default_parameters() -> dict:
     return {
         'red': False,
         'vis': False,
+        'hematocrit': 0.45,
+        'Cp': False,  # Takes plasma concentration, not arterial concentration
         'meanc': True,
         'collapse': False,
         'initializepatlak': False,
@@ -18,6 +20,7 @@ def default_parameters() -> dict:
         # prm['intmethod'] = 'numint';
         # 'intmethod': 'loop',
         'loss': 'linear',
+        'diff_step': None,
         'x_scale': None,
         'f_scale': 1.0,
     }
