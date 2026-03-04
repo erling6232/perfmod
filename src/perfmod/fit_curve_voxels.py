@@ -1,3 +1,4 @@
+import sys
 import os.path
 import numpy as np
 from scipy.optimize import curve_fit, least_squares
@@ -15,44 +16,23 @@ def difference(x, *args, **kwargs):
 def fit_curve_voxels(fun: callable,
                      im: Series,
                      aif_value, timeline, meanc, volume, hct, b0=None, prm=None
-                     ):
+                     ) -> dict:
     """MRI-measurement of perfusion and glomerular filtration in the human
     kidney with a separable compartment model. Sourbron SP, Michaely HJ,
     Reiser MF, Schoenberg SO. Invest Radiol. 2008 Jan;43(1):40-8.
     """
 
-    # prm = {'vis': False,
-    #        'savefig': False,
-    #        'intmethod': 'conv',
-    #        # 'intmethod': 'matrix',
-    #        # 'intmethod': 'numint',
-    #        'loss': 'linear',
-    #        'f_scale': 1.0,
-    #        }
-    # handlefig = [];
-
-    # optimization parameters, initialization
-    # b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30}
-
-    # # input parameters
-    # if b0in is not None:
-    #     for key in b0in.keys():
-    #         b0[key] = b0in[key]
-    #
-    # # input parameters
-    # if prmin is not None:
-    #     for key in prmin.keys():
-    #         prm[key] = prmin[key]
-
     # account for hematocrit
     # Sourbron 2013, eqs 37-40
-    aif = aif_value / (1 - hct)
+    if prm['Cp']:
+        aif = aif_value / (1 - hct)
+    else:
+        aif = aif_value
 
     ntime = im.shape[0]
     if meanc:
         im = np.mean(im, axis=(1, 2, 3)).reshape((ntime, 1))
         volume = np.sum(volume)
-    # dim = im.ndim
     if im.ndim > 1:
         nvox = im.shape[1]
     else:
@@ -96,7 +76,6 @@ def fit_curve_voxels(fun: callable,
     # initial values of model data and GFR
     # f = np.empty((ntime, nvox), dtype=np.float64)
     f = np.full((ntime, nvox), np.nan, dtype=np.float64)
-    # f[:] = np.nan
     data = {
         'aif_value': aif,
         'xdata': xdata
@@ -129,9 +108,10 @@ def fit_curve_voxels(fun: callable,
                                          verbose=1)
                 # perr = np.sqrt(np.diag(pcov))  # One standard deviation
             case 'least_squares':
-                # fun_diff = make_difference(fun, data['xdata'], data['ydata'], aif_value)
-                # least_squares(fun_diff, data['xdata'], data['ydata'],)
                 result = least_squares(difference, b0in, bounds=(lb, ub),
+                                       max_nfev=sys.maxsize * 2 + 1,
+                                       diff_step=prm['diff_step'],
+                                       x_scale=prm['x_scale'],
                                        args=(fun, data['xdata'], data['ydata'])
                                        )
                 boutls = result.x
@@ -144,7 +124,6 @@ def fit_curve_voxels(fun: callable,
         b[:, i] = boutls
 
         print('Obtained parameters: {}'.format(boutls))
-        print('Obtained parameters: {}'.format(b))
 
         # compute the response function
         # compute = fun(aif)
