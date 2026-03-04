@@ -1,11 +1,12 @@
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy import ndimage
 from collections import defaultdict
 from imagedata import Series
 from .fit_curve_voxels import fit_curve_voxels
 from .myfun import make_annet_conv, make_sourbron_conv  # , make_patlak
 from .models.gctt import make_gctt, make_gctt_delay
-from .models.tofts import make_tofts
+from .models.tofts import make_tofts, make_extended_tofts
 from .models.annet import make_annet
 # from .C_fitted import make_C_fitted, make_C_fitted_delay_minus_y_T1, make_C_fitted_delay_T1
 from .aif.parker import parker
@@ -14,7 +15,26 @@ from .aif.find_delay import find_delay
 import matplotlib.pyplot as plt
 
 
-def fit_curves(im: Series, method: str,
+def show(signal, x=None, ax=None, show=False, label=None, color=None):
+    if ax is None:
+        fig, ax = plt.subplots(1)
+        show = True
+    if len(signal):
+        if issubclass(type(signal), Series):
+            signal = np.array(signal)
+        if x is None:
+            ax.plot(signal, label=label, color=color)
+        else:
+            ax.plot(x, signal, label=label, color=color)
+        ax.grid(True)
+        if label is not None:
+            ax.legend(loc='upper right')
+    if show:
+        plt.show()
+
+
+def fit_curves(im: np.ndarray | Series,
+               method: str,
                aif_mask: Series = None,
                roi_mask: Series = None,
                h: np.ndarray = None,
@@ -32,12 +52,17 @@ def fit_curves(im: Series, method: str,
     assert im is not None, 'No image provided'
     assert method is not None, 'No method provided'
     assert hematocrit >= 0 and hematocrit <= 1, 'Hematocrit must be between 0 and 1'
-    assert im.axes[0].name == 'time', 'Image must be time series'
+    if issubclass(type(im), Series):
+        assert im.axes[0].name == 'time', 'Image must be time series'
 
     # input variables - default values
     if prmin is None:
         prmin = {}
-    prmin = {'aif_method': 'individual', 'aif_normalization_method': 'max', 'meanc': False} | prmin
+    prmin = {
+                'aif_method': 'individual', 'aif_normalization_method': 'max',
+                'meanc': False,
+                'vis': False,
+            } | prmin
     # initial parameters
     if b0in is None:
         b0in = {}
@@ -65,11 +90,14 @@ def fit_curves(im: Series, method: str,
         timeline_aif = timeline
     else:
         timeline = timeline_data
-    assert np.all(timeline_data == timeline_aif), "Timelines do not match"
+    assert np.all(timeline == timeline_aif), "Timelines do not match"
 
     print('Parameters in fit_curves:\n{}'.format(prmin))
     if h is None:
-        h = im.spacing
+        try:
+            h = im.spacing
+        except AttributeError:
+            h = (1, 1, 1)
     assert len(h) == 3, "Wrong image spacing {}".format(h)
 
     # reduce size?
@@ -110,15 +138,21 @@ def fit_curves(im: Series, method: str,
     # show4D(im,im_aif,aif_mask,roi_mask)
     # im_aif = im2vec4D(im_aif,aif_mask)
     if im_aif.ndim > 1:
-        aif_value = np.sum(im_aif, axis=(1, 2, 3), where=aif_mask > 0) / np.count_nonzero(aif_mask > 0)
+        aif_value = np.mean(im_aif, axis=(1, 2, 3), where=aif_mask > 0)
     else:
         aif_value = im_aif
-    # im_aif = np.where(aif_mask > 0, im_aif, np.nan)
-    # aif_value = np.nanmean(im_aif, axis=(1, 2, 3))
-    # aif_value = aif_value'
 
-    # make column vector for gamma fit
-    # timeline = timeline.reshape((timeline.shape[0], 1))
+    if len(timeline) % 2 == 0:
+        # Ensure odd length
+        _dt = timeline[-1] - timeline[-2]
+        timeline = np.append(timeline, [timeline[-1] + _dt])
+        timeline_aif = np.append(timeline_aif, [timeline_aif[-1] + _dt])
+        _dy = aif_value[-1] - aif_value[-2]
+        aif_value = np.append(aif_value, [aif_value[-1] + _dy])
+
+        if prmin['average_aif'] is not None and issubclass(type(prmin['average_aif']), np.ndarray):
+            _dy = prmin['average_aif'][-1] - prmin['average_aif'][-2]
+            prmin['average_aif'] = np.append(prmin['average_aif'], [prmin['average_aif'][-1] + _dy])
 
     aif_model = aif_value
     match prmin['aif_method']:
@@ -144,30 +178,25 @@ def fit_curves(im: Series, method: str,
         case '_':
             raise ValueError('Unknown AIF method: {}'.format(prmin['aif_method']))
     # if prm['aif_method'] in ['parker', 'average']:
-    aif_matched, norm_coeff = normalize_aif(aif_model, aif_value, prmin['aif_normalization_method'])
+    aif_matched, norm_coeff = normalize_aif(aif_model, aif_value, prmin, timeline_aif)
     print('Normalization coefficient: {}'.format(norm_coeff))
+    if prmin['aif_normalization_method'] == 'auc_unity':
+        aif_matched = aif_matched  # * _norm
 
     if im.ndim > 1:
-        # new dimension of image
-        # dim = im.ndim
-        dim3 = im.shape[-3:]
-
-        # reshape the data to n x t matrix to only optimize in the kidney region, to
-        # save time
-        imini = im
-        # im = im2vec4D(im,roi_mask);
-        img = np.sum(im, axis=(1, 2, 3), where=roi_mask > 0) / np.count_nonzero(roi_mask > 0)
+        img = np.mean(im, axis=(1, 2, 3), where=roi_mask > 0) * norm_coeff
     else:
-        dim3 = (1,)
-        imini = im
-        img = im
+        img = im * norm_coeff
+    _dy = img[-1] - img[-2]
+    while len(img) < len(timeline):
+        # Ensure same (odd) length as aif
+        # img = np.append([0], img)
+        img = np.append(img, [img[-1] + _dy])
 
     if voxel_volume is None:
         voxel_volume = np.prod(h)
-    # volume = ones(nnz(roi_mask),1)*voxel_volume;
-    # volume = np.full((len(roi_mask.nonzero()[0]), 1), voxel_volume * len(roi_mask.nonzero()[0]))
     if roi_mask is not None:
-        volume = voxel_volume * len(roi_mask.nonzero()[0])
+        volume = voxel_volume * np.count_nonzero(roi_mask)
     else:
         volume = voxel_volume
 
@@ -176,8 +205,9 @@ def fit_curves(im: Series, method: str,
         'annet': make_annet,
         'sourbron': make_sourbron_conv,
         # 'patlak': make_patlak,
-        'gctt': make_gctt_delay,  # make_C_fitted_delay_T1,  # make_C_fitted_delay_minus_y_T1,
-        'tofts': make_tofts,
+        'gctt': make_gctt,  # make_gctt_delay,  # make_C_fitted_delay_T1,  # make_C_fitted_delay_minus_y_T1,
+        'tm': make_tofts,
+        'etm': make_extended_tofts,
     })
     prmin['method'] = method
     print(f'fit_curves: b0in={b0in}')
@@ -186,25 +216,25 @@ def fit_curves(im: Series, method: str,
 
     # prm_model = {'vis': prm['vis']}
     out = {'handle': [],
-           'norm_coeff': norm_coeff
+           'norm_coeff': norm_coeff,
+           'parameters': prm_model['parameters'],
+           'units': prm_model['units'],
            }
 
-    # img, norm_coeff_img = normalize_aif(img, img, prmin['aif_normalization_method'])
-    img = img * norm_coeff
-    fig, ax = plt.subplots(2, 2)
-    # curve = np.sum(img, axis=(1, 2, 3), where=roi_mask == 1) / np.count_nonzero(roi_mask == 1)
-    # show(img, ax=ax[0, 0], show=False, label='tissue data')
-    # show(aif_value, ax=ax[0, 0], show=False, label='aif data')
-    # curve = np.sum(img, axis=(1, 2, 3), where=aif_mask == 1) / np.count_nonzero(aif_mask == 1)
-    # show(aif_model, ax=ax[0, 1], show=False, label='aif model')
-    # show(curve, ax=ax[0, 1], show=False, label='aif roi')
-    # show(aif_matched, ax=ax[1, 0], show=False, label='aif matched')
-    # b0tt = [b0[_] for _ in prm_model['parameters']]
-    #curve = np.zeros_like(img)
-    #for i, t in enumerate(timeline):
-    # curve = fun(timeline, *b0tt)
-    # print('curve: ', curve.shape)
-    # show(curve, ax=ax[1, 1], show=True, label=method)
+    if prmin['vis']:
+        fig, ax = plt.subplots(2, 2)
+        # curve = np.mean(img, axis=(1, 2, 3), where=roi_mask == 1)
+        show(img, ax=ax[0, 0], show=False, label='tissue data')
+        show(aif_value*norm_coeff, ax=ax[0, 1], show=False, label='aif data')
+        # curve = np.mean(img, axis=(1, 2, 3), where=aif_mask == 1)
+        show(aif_model*norm_coeff, ax=ax[0, 1], show=False, label='aif model')
+        # show(curve, ax=ax[0, 1], show=False, label='aif roi')
+        show(aif_matched, ax=ax[1, 0], show=False, label='aif matched')
+        # b0tt = [b0[_] for _ in prm_model['parameters']]
+        # b0tt = [b0['F'], b0['E'], b0['ve'], b0['Tc'], b0['alphainv'], b0['delay']]
+        # curve = fun(timeline, *b0tt)
+        # print('curve: ', curve.shape)
+        # show(curve, ax=ax[1, 1], show=False, label=method)
 
     # initialize by the Patlak model
 
@@ -214,10 +244,11 @@ def fit_curves(im: Series, method: str,
         img, aif_matched, timeline, prm_model['meanc'], volume, hematocrit, b0=b0, prm=prm_model
     )
 
+    if prmin['vis']:
+        show(img, ax=ax[1, 1], show=False, label='Tissue')
+        show(out['fitted'], ax=ax[1, 1], show=True, label='Fitted')
     out['fun'] = fun
     out['timeline'] = timeline
-    # out['ind'] = find(roi_mask)
-    out['dim3'] = dim3
     out['h'] = h
     out['aif'] = aif_matched
     return out
@@ -245,30 +276,34 @@ def fit_curves(im: Series, method: str,
 
 def normalize_aif(model: Series | np.ndarray,
                   value: Series | np.ndarray,
-                  normalization_method: str = 'auc') -> Series | np.ndarray:
+                  prmin: dict,
+                  timeline: np.ndarray) -> tuple[Series | np.ndarray, float]:
+    normalization_method = prmin['aif_normalization_method']
     match normalization_method:
+        case 'none':
+            norm_coeff = 1.0
         case 'auc':
             norm_coeff = np.sum(value) / np.sum(model)
-            # model = model * np.sum(value) / np.sum(model)
+        case 'parker':
+            _parker = parker(prmin['parker_parameters'], len(timeline), timeline)
+            _norm = np.sum(_parker) / np.sum(value)
+            model = value * _norm
+            auc_diff = np.sum(value) / np.sum(model)
+            # value = value * auc_diff
+            norm_coeff = 1.0 / np.max(model)
+            # model = value * norm_coeff
+            return model, norm_coeff
         case 'max':
             norm_coeff = np.max(value) / np.max(model)
-            # model = model * np.max(value) / np.max(model)
-        case 'unity':  # unity
+        case 'unity':
             norm_coeff = 1.0 / np.max(model)
-            # model = model / np.max(model)
         case '_':
             raise ValueError('Unknown normalization method: {}'.format(normalization_method))
     model = model * norm_coeff
-    delay = find_delay(value, model)
-    matched = np.zeros_like(model)
-    l = matched.shape[0]
-    if delay < 0:
-        matched[:l - abs(delay)] = model[(abs(delay)):]
-    elif delay > 0:
-        matched[delay:] = model[:-delay]
-    else:
-        matched = model
-    return matched, norm_coeff
+    return model, norm_coeff
+    # delay = find_delay(value, model)
+    # matched = ndimage.shift(model, delay, mode='nearest')
+    # return matched, norm_coeff
 
 
 def smooth_reference(x, y, p0=None):
