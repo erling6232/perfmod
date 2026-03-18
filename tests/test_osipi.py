@@ -8,7 +8,7 @@ from perfmod.fit_curves import fit_curves
 
 dce_etm = 'https://raw.githubusercontent.com/OSIPI/DCE-DSC-MRI_CodeCollection/develop/test/DCEmodels/data/dce_DRO_data_extended_tofts.csv'
 
-if os.environ['https_proxy']:
+if 'https_proxy' in os.environ:
     http = urllib3.ProxyManager(os.environ['https_proxy'])
 else:
     http = urllib3.PoolManager()
