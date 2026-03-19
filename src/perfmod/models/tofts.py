@@ -33,7 +33,7 @@ def make_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # optimization parameters, initialization
     b0 = {'ktrans': 0.6, 've': 0.2}
     prm['parameters'] = ['ktrans', 've']
-    prm['units'] = {'ktrans': 'ml/ml/s', 've': None}
+    prm['units'] = {'ktrans': 'ml/ml/t', 've': None}
 
     # Apply user-provided parameters
     prm = prm | prmin
@@ -74,7 +74,7 @@ def make_extended_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # optimization parameters, initialization
     b0 = {'ktrans': 0.6, 've': 0.2, 'vp': 0.01}
     prm['parameters'] = ['ktrans', 've', 'vp']
-    prm['units'] = {'ktrans': 'ml/ml/s', 've': None, 'vp': None}
+    prm['units'] = {'ktrans': 'ml/ml/t', 've': None, 'vp': None}
 
     # Apply user-provided parameters
     prm = prm | prmin

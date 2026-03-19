@@ -52,7 +52,7 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # optimization parameters, initialization
     b0 = {'F': 1.0, 'E': 0.5, 've': 0.5, 'Tc': 1., 'alphainv': 0.2}
     prm['parameters'] = ['F', 'E', 've', 'Tc', 'alphainv']
-    prm['units'] = {'F': 'ml/ml/s', 'E': None, 've': None, 'Tc': 's',
+    prm['units'] = {'F': 'ml/ml/t', 'E': None, 've': None, 'Tc': 't',
                     'alphainv': None}
 
     # Apply user-provided parameters
@@ -122,8 +122,8 @@ def make_gctt_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # F [ml/(ml s)], E [-], ve [-], Tc [min], alphainv [-], BAT [min]};
     b0 = {'F': 1., 'E': 0.5, 've': 0.5, 'Tc': 1., 'alphainv': 0.2, 'delay': 0.}
     prm['parameters'] = ['F', 'E', 've', 'Tc', 'alphainv', 'delay']
-    prm['units'] = {'F': 'ml/ml/s', 'E': None, 've': None, 'Tc': 's',
-                    'alphainv': None, 'delay': 's'}
+    prm['units'] = {'F': 'ml/ml/t', 'E': None, 've': None, 'Tc': 't',
+                    'alphainv': None, 'delay': 't'}
 
     # Apply user-provided parameters
     prm = prm | prmin
