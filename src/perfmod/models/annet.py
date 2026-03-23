@@ -55,8 +55,8 @@ def make_annet(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # optimization parameters, initialization
     b0 = {'tau': 0.1, 'd': 0.1, 'fa': 0.1, 'k21': 0.1, 'k12': 0.9}
     prm['parameters'] = ['tau', 'd', 'fa', 'k21', 'k12']
-    prm['units'] = {'tau': 't', 'd': None, 'fa': None, 'k21': 'mL/t',
-                    'k12': 'mL/t'};
+    prm['units'] = {'tau': 't', 'd': None, 'fa': None, 'k21': 'ml/t',
+                    'k12': 'ml/t'};
 
     # Apply user-provided parameters
     prm = prm | prmin

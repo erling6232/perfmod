@@ -41,18 +41,9 @@ class test_osipi(unittest.TestCase):
             hematocrit = 0.45
             prmin = {
                 'aif_method': 'individual',  # 'average',  # 'individual',  # 'parker',
-                'parker_parameters': [
-                    # 0.1243, 0.2396, 0.6036, 0.8118, 0.0595, 0.1310, 0.7311, 0.1477, 19.9689, 0.9753
-                    0.124334765812798 / (1 - hematocrit), 0.239563489715623 / (1 - hematocrit), 0.603585361458666,
-                    0.811799743324240, 0.059508203376276, 0.130991427949138, 0.731124500234021 / (1 - hematocrit),
-                    0.147719764581375, 19.968878311182397, 0.975259183264668
-                ],
-                # 'average_aif': avg_aif / (1 - hematocrit),
                 'aif_normalization_method': 'none',  # 'parker', 'unity', 'max', 'auc',
                 'hematocrit': hematocrit,
                 'optmethod': 'least_squares',
-                # F, E, ve, Tc, alphainv, delay
-                # 'x_scale': np.array([0.1, 1., 1., 1., 1., 1.])
             }
             out = fit_curves(c, method,
                              im_aif=ca,
