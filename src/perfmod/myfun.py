@@ -116,14 +116,14 @@ def make_annet_matrix(aif_value, b0in, prmin):
 def make_sourbron_conv(aif_value, b0in, prmin):
     # Construction to pass aif_value to function
     # def myfun_sourbron_conv(x, vp, tp, ft, tt):
-    def myfun_sourbron_conv(x, *b):
+    def myfun_sourbron_conv(t, *b):
         # NB must have equal time sampling
 
         # x = x(:);
         # x = x.reshape(-1, 1)
         # aif = aif_value(:);
         # aif = aif_value.reshape(-1, 1)
-        aif = aif_value
+        # aif = aif_value
 
         # [vp tp ft tt]
         # vp = b(1);
@@ -133,26 +133,26 @@ def make_sourbron_conv(aif_value, b0in, prmin):
         vp, tp, ft, tt = b
 
         # ntime = numel(x);
-        ntime = x.size
+        # ntime = t.size
         # dt = (x([2:end end]) - x([1 1:end-1]))/2;
-        dt = np.empty_like(x, dtype=np.float32)
-        dt[1:] = x[1:] - x[:-1]
+        dt = np.empty_like(t, dtype=np.float32)
+        dt[1:] = t[1:] - t[:-1]
         # dt(1) = dt(2);
         dt[0] = dt[1]
         # dt(end) = dt(end-1);
 
-        f2 = dt * np.exp(-x / tp)
+        f2 = dt * np.exp(-t / tp)
         # cp = conv(aif,f2/tp,'same');
         # cp = np.convolve(aif, f2 / tp, mode='same')
-        cp = np.convolve(aif, f2 / tp)
-        cp = cp[:ntime]
+        cp = np.convolve(aif_value, f2 / tp)[:t.size]
+        # cp = cp[:ntime]
         # cp = cp.reshape(-1, 1)
 
-        f1 = dt * np.exp(-x / tt)
+        f1 = dt * np.exp(-t / tt)
         # ck = ft*conv(f1,cp,'same');
         # ck = ft*np.convolve(f1, cp, mode='same')
-        ck = ft * np.convolve(f1, cp)
-        ck = ck[:ntime]
+        ck = ft * np.convolve(f1, cp)[:t.size]
+        # ck = ck[:ntime]
         # ck = ck.reshape(-1, 1)
         c = vp * cp + ck
         return c
@@ -160,6 +160,8 @@ def make_sourbron_conv(aif_value, b0in, prmin):
     # Set defaults
     # Apply user-provided parameters
     prm = default_parameters() | prmin
+    prm['parameters'] = ['vp', 'tp', 'ft', 'tt']
+    prm['units'] = {'vp': None, 'tp': 't', 'ft': 'ml/ml/t', 'tt': 't'}
 
     # optimization parameters, initialization
     b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
