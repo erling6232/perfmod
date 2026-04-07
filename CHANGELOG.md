@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!--next-version-placeholder-->
 
+## [v0.0.5] - 2026-04-07
+* Do not normalize tissue function, only AIF.
+
 ## [v0.0.4] - 2026-03-24
 * Added Sourbron filtration model.
  

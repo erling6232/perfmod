@@ -160,11 +160,15 @@ def make_sourbron_conv(aif_value, b0in, prmin):
     # Set defaults
     # Apply user-provided parameters
     prm = default_parameters() | prmin
-    prm['parameters'] = ['vp', 'tp', 'ft', 'tt']
-    prm['units'] = {'vp': None, 'tp': 't', 'ft': 'ml/ml/t', 'tt': 't'}
+    prm['x_scale'] = None
+    prm['lower_bounds'] = np.array([0, 1, 0, 0])
+    prm['upper_bounds'] = np.array([1, 50, 0.5, 300])
+    prm['parameters'] = ['vp', 'Tp', 'Ft', 'Tt']
+    prm['units'] = {'vp': None, 'Tp': 't', 'Ft': 'ml/ml/t', 'Tt': 't'}
+    prm['Cp'] = True
 
     # optimization parameters, initialization
-    b0 = {'vp': 0.15, 'tp': 4.5, 'ft': 0.0044, 'tt': 30} | b0in
+    b0 = {'vp': 0.15, 'Tp': 4.5, 'Ft': 0.0044, 'Tt': 30} | b0in
 
     return myfun_sourbron_conv, b0, prm
 
