@@ -186,9 +186,9 @@ def fit_curves(im: np.ndarray | Series,
         aif_matched = aif_matched  # * _norm
 
     if im.ndim > 1:
-        img = np.mean(im, axis=(1, 2, 3), where=roi_mask > 0) * norm_coeff
+        img = np.mean(im, axis=(1, 2, 3), where=roi_mask > 0)
     else:
-        img = im * norm_coeff
+        img = im
     _dy = img[-1] - img[-2]
     while len(img) < len(timeline):
         # Ensure same (odd) length as aif
@@ -219,6 +219,7 @@ def fit_curves(im: np.ndarray | Series,
     # prm_model = {'vis': prm['vis']}
     out = {'handle': [],
            'norm_coeff': norm_coeff,
+           'volume': volume,
            'parameters': prm_model['parameters'],
            'units': prm_model['units'],
            }
