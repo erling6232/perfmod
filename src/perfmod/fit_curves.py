@@ -59,6 +59,7 @@ def fit_curves(im: np.ndarray | Series,
     if prmin is None:
         prmin = {}
     prmin = {
+                'optmethod': 'curve_fit',
                 'aif_method': 'individual',
                 'aif_normalization_method': 'max',
                 'average_aif': None,
