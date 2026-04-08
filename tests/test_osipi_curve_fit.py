@@ -17,7 +17,7 @@ if response.status != 200:
     raise FileNotFoundError('Failed to download file. Status code:', response.status)
 
 
-class test_osipi(unittest.TestCase):
+class test_osipi_curve_fit(unittest.TestCase):
     def setUp(self):
         self.df = pd.read_csv(io.StringIO(response.data.decode("utf-8")), sep = ",")
 
@@ -43,7 +43,7 @@ class test_osipi(unittest.TestCase):
                 'aif_method': 'individual',  # 'average',  # 'individual',  # 'parker',
                 'aif_normalization_method': 'none',  # 'parker', 'unity', 'max', 'auc',
                 'hematocrit': hematocrit,
-                'optmethod': 'least_squares',
+                'optmethod': 'curve_fit',
             }
             out = fit_curves(c, method,
                              im_aif=ca,
@@ -101,7 +101,7 @@ class test_osipi(unittest.TestCase):
                 'aif_method': 'individual',  # 'average',  # 'individual',  # 'parker',
                 'aif_normalization_method': 'none',  # 'parker', 'unity', 'max', 'auc',
                 'hematocrit': hematocrit,
-                'optmethod': 'least_squares',
+                'optmethod': 'curve_fit',
             }
             out = fit_curves(c, method,
                              im_aif=ca,
