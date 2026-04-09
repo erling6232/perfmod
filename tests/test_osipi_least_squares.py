@@ -44,6 +44,7 @@ class test_osipi_least_squares(unittest.TestCase):
                 'aif_normalization_method': 'none',  # 'parker', 'unity', 'max', 'auc',
                 'hematocrit': hematocrit,
                 'optmethod': 'least_squares',
+                'Cp': False,
             }
             out = fit_curves(c, method,
                              im_aif=ca,

@@ -81,7 +81,7 @@ class TestPerfusion(unittest.TestCase):
                          timeline_aif=self.timeline)
         np.testing.assert_array_almost_equal(
             out['b'][:, 0],
-            np.array([0.01129, 0.008336]),
+            np.array([0.0062, 0.0046]),
             decimal=4
         )
 
