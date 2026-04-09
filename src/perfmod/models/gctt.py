@@ -59,6 +59,10 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     prm = prm | prmin
     b0 = b0 | b0in
 
+    # account for hematocrit
+    if prm['Cp']:
+        aif_value = aif_value / (1 - prm['hematocrit'])
+
     return gctt, b0, prm
 
 
@@ -128,6 +132,10 @@ def make_gctt_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # Apply user-provided parameters
     prm = prm | prmin
     b0 = b0 | b0in
+
+    # account for hematocrit
+    if prm['Cp']:
+        aif_value = aif_value / (1 - prm['hematocrit'])
 
     parker_parameters = prm['parker_parameters']
 
