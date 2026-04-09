@@ -7,29 +7,14 @@ def make_annet(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 
     def annet(x, *b):
 
-        # b = [tau d fa k21 k12]
-        # tau = b(1);
-        # d   = b(2);
-        # fa  = b(3);
-        # k21 = b(4);
-        # k12 = b(5);
         tau, d, fa, k21, k12 = b
 
-        # ntime = numel(x);
-        # ntime = np.prod(x.size).item()
-
-        # delta t
-        # dt = (x([2:end end]) - x([1 1:end-1]))/2;
         dt = np.empty_like(x, dtype=np.float32)
         dt[1:] = x[1:] - x[:-1]
-        # dt(1) = dt(2);
         dt[0] = dt[1]
-        # dt(end) = dt(end-1);
 
         m = np.mean(aif_value)
-        # f1 = interp1(x,aif_value,x + tau,'linear',m);
         f1 = np.interp(x + tau, x, aif_value, left=m, right=m)
-        # f1 = aif_value;
         f2 = dt * np.exp(-x / d)
         caprime = np.convolve(f1, f2 / d)[:x.size]
 
@@ -61,6 +46,10 @@ def make_annet(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # Apply user-provided parameters
     prm = prm | prmin
     b0 = b0 | b0in
+
+    # account for hematocrit
+    if prm['Cp']:
+        aif_value = aif_value / (1 - prm['hematocrit'])
 
     return annet, b0, prm
 
