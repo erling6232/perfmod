@@ -36,7 +36,7 @@ def fit_curve_voxels(fun: callable,
     print('Dimension optimization data: {} x {}'.format(nvox, ntime))
 
     # print to screen
-    print('This is {}\n{}'.format(os.path.basename(__file__), prm))
+    # print('This is {}\n{}'.format(os.path.basename(__file__), prm))
 
     # lower and upper bound of the optimization parameters
     try:
