@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import ndimage
 from . import default_parameters
 
 
@@ -38,6 +37,10 @@ def make_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # Apply user-provided parameters
     prm = prm | prmin
     b0 = b0 | b0in
+
+    # account for hematocrit
+    if prm['Cp']:
+        aif_value = aif_value / (1 - prm['hematocrit'])
 
     return tofts, b0, prm
 
@@ -79,5 +82,9 @@ def make_extended_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
     # Apply user-provided parameters
     prm = prm | prmin
     b0 = b0 | b0in
+
+    # account for hematocrit
+    if prm['Cp']:
+        aif_value = aif_value / (1 - prm['hematocrit'])
 
     return extended_tofts, b0, prm
