@@ -4,10 +4,10 @@ from scipy import ndimage
 from collections import defaultdict
 from imagedata import Series
 from .fit_curve_voxels import fit_curve_voxels
-from .myfun import make_annet_conv, make_sourbron_conv  # , make_patlak
 from .models.gctt import make_gctt, make_gctt_delay
 from .models.tofts import make_tofts, make_extended_tofts
 from .models.annet import make_annet
+from .models.sourbron import make_sourbron_conv
 # from .C_fitted import make_C_fitted, make_C_fitted_delay_minus_y_T1, make_C_fitted_delay_T1
 from .aif.parker import parker
 from .aif.find_delay import find_delay
