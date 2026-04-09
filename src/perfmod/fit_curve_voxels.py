@@ -3,7 +3,6 @@ import os.path
 import numpy as np
 from scipy.optimize import curve_fit, least_squares
 from imagedata import Series
-from .myfun import make_sourbron_conv, make_sourbron_numint, make_sourbron_matrix, make_sourbron_loop
 
 
 def difference(x, *args, **kwargs):
@@ -22,12 +21,6 @@ def fit_curve_voxels(fun: callable,
     Reiser MF, Schoenberg SO. Invest Radiol. 2008 Jan;43(1):40-8.
     """
 
-    # account for hematocrit
-    # Sourbron 2013, eqs 37-40
-    if prm['Cp']:
-        aif = aif_value / (1 - hct)
-    else:
-        aif = aif_value
 
     ntime = im.shape[0]
     if meanc:
@@ -77,7 +70,7 @@ def fit_curve_voxels(fun: callable,
     # f = np.empty((ntime, nvox), dtype=np.float64)
     f = np.full((ntime, nvox), np.nan, dtype=np.float64)
     data = {
-        'aif_value': aif,
+        'aif_value': aif_value,
         'xdata': xdata
     }
 
