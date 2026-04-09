@@ -158,14 +158,21 @@ def make_sourbron_conv(aif_value, b0in, prmin):
         return c
 
     # Set defaults
-    # Apply user-provided parameters
-    prm = default_parameters() | prmin
+    prm = default_parameters()
     prm['x_scale'] = None
     prm['lower_bounds'] = np.array([0, 1, 0, 0])
     prm['upper_bounds'] = np.array([1, 50, 0.5, 300])
     prm['parameters'] = ['vp', 'Tp', 'Ft', 'Tt']
     prm['units'] = {'vp': None, 'Tp': 't', 'Ft': 'ml/ml/t', 'Tt': 't'}
     prm['Cp'] = True
+    prm['hematocrit'] = 0.45
+    # Apply user-provided parameters
+    prm = prm | prmin
+
+    # account for hematocrit
+    # Sourbron 2013, eqs 37-40
+    if prm['Cp']:
+        aif_value = aif_value / (1 - prm['hematocrit'])
 
     # optimization parameters, initialization
     b0 = {'vp': 0.15, 'Tp': 4.5, 'Ft': 0.0044, 'Tt': 30} | b0in
