@@ -75,10 +75,6 @@ def fit_curve_voxels(fun: callable,
     }
 
     b0in = [b0[_] for _ in prm['parameters']]
-    print('fit_curve_voxels: Initial parameters: {}'.format(b0))
-    print('fit_curve_voxels: Initial parameters: {}'.format(b0in))
-    print('fit_curve_voxels: Lower bounds: {}'.format(lb))
-    print('fit_curve_voxels: Upper bounds: {}'.format(ub))
 
     # prm['vis'] = True
     b = np.full((len(b0in), nvox), np.nan, dtype=np.float64)

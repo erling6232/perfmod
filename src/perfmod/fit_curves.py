@@ -1,10 +1,9 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from scipy import ndimage
 from collections import defaultdict
 from imagedata import Series
 from .fit_curve_voxels import fit_curve_voxels
-from .models.gctt import make_gctt, make_gctt_delay
+from .models.gctt import make_gctt
 from .models.tofts import make_tofts, make_extended_tofts
 from .models.annet import make_annet
 from .models.sourbron import make_sourbron_conv
@@ -95,7 +94,7 @@ def fit_curves(im: np.ndarray | Series,
         timeline = timeline_data
     assert np.all(timeline == timeline_aif), "Timelines do not match"
 
-    print('Parameters in fit_curves:\n{}'.format(prmin))
+    # print('Parameters in fit_curves:\n{}'.format(prmin))
     if h is None:
         try:
             h = im.spacing
@@ -182,9 +181,9 @@ def fit_curves(im: np.ndarray | Series,
             raise ValueError('Unknown AIF method: {}'.format(prmin['aif_method']))
     # if prm['aif_method'] in ['parker', 'average']:
     aif_matched, norm_coeff = normalize_aif(aif_model, aif_value, prmin, timeline_aif)
-    print('Normalization coefficient: {}'.format(norm_coeff))
+    # print('Normalization coefficient: {}'.format(norm_coeff))
     if prmin['aif_normalization_method'] == 'auc_unity':
-        aif_matched = aif_matched  # * _norm
+        aif_matched = aif_matched
 
     if im.ndim > 1:
         img = np.mean(im, axis=(1, 2, 3), where=roi_mask > 0)
@@ -215,7 +214,7 @@ def fit_curves(im: np.ndarray | Series,
     prmin['method'] = method
     print(f'fit_curves: b0in={b0in}')
     fun, b0, prm_model = methods[method](aif_matched, b0in, prmin)
-    print(f'fit_curves: b0={b0}')
+    # print(f'fit_curves: b0={b0}')
 
     # prm_model = {'vis': prm['vis']}
     out = {'handle': [],
@@ -243,7 +242,6 @@ def fit_curves(im: np.ndarray | Series,
     # initialize by the Patlak model
 
     print('Fitting curves...')
-    print('img[0], aif_matched[0]: ', img[0], aif_matched[0])
     out = out | fit_curve_voxels(fun,
         img, aif_matched, timeline, prm_model['meanc'], volume, hematocrit, b0=b0, prm=prm_model
     )
@@ -316,8 +314,8 @@ def smooth_reference(x, y, p0=None):
 
     if p0 is None:
         p0 = (1, 1, 1)
-    print('smooth_reference: x={}, y={}'.format(x.shape, y.shape))
+    # print('smooth_reference: x={}, y={}'.format(x.shape, y.shape))
     par, pcov = curve_fit(func, x, y, p0=p0)
-    print('Reference curve: {}'.format(par))
+    # print('Reference curve: {}'.format(par))
     a, b, c = par
     return a + b * x + c * x * x
