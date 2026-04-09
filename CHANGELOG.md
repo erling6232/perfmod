@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!--next-version-placeholder-->
 
+## [v0.0.7] - 2026-04-09
+* Hematocrit aif correction is moved to each model implementation.
+
 ## [v0.0.6] - 2026-04-08
 * Default optimization method is curve_fit.
 
