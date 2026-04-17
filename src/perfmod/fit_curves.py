@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import ndimage
 from scipy.optimize import curve_fit
 from collections import defaultdict
 from imagedata import Series
@@ -288,13 +289,15 @@ def normalize_aif(model: Series | np.ndarray,
             norm_coeff = np.sum(value) / np.sum(model)
         case 'parker':
             _parker = parker(prmin['parker_parameters'], len(timeline), timeline)
-            _norm = np.sum(_parker) / np.sum(value)
+            _norm = np.sum(value) / np.sum(_parker)
             model = value * _norm
             auc_diff = np.sum(value) / np.sum(model)
             # value = value * auc_diff
             norm_coeff = 1.0 / np.max(model)
             # model = value * norm_coeff
-            return model, norm_coeff
+            delay = find_delay(value, model)
+            matched = ndimage.shift(model, delay, mode='nearest')
+            return matched, norm_coeff
         case 'max':
             norm_coeff = np.max(value) / np.max(model)
         case 'unity':
