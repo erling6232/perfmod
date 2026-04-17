@@ -120,7 +120,7 @@ def fit_curve_voxels(fun: callable,
         # compute the response function
         # compute = fun(aif)
         compute = fun(timeline, *boutls)
-        res = scipy.stats.chisquare(f_obs=data['ydata'], f_exp=compute)
+        res = scipy.stats.chisquare(f_obs=data['ydata'], f_exp=compute, sum_check=False)
         statistic[i] = res.statistic
         pvalue[i] = res.pvalue
         # if prm['intmethod'] == 'conv':
