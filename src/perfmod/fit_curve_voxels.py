@@ -176,6 +176,7 @@ def fit_curve_voxels(fun: callable,
     out['b'] = b.copy()
     out['statistic'] = statistic.copy()
     out['pvalue'] = pvalue.copy()
+    out['r2'] = r2.copy()
     # ROI volume
     out['roivol'] = np.sum(vol)
     out['roivolunit'] = 'ml'
