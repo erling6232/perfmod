@@ -26,6 +26,7 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         tau = Tc / alpha
         kep = (E * F) / ve
         if (1 / tau - kep) < 0:
+            return np.full(t.shape, 1e8)
             raise ValueError("gammaincc(.., 1/tau - kep) is negative")
 
         Rv = sc.gammaincc(alpha, t / tau)
