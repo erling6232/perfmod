@@ -1,6 +1,7 @@
 import sys
 import os.path
 import numpy as np
+import scipy.stats
 from scipy.optimize import curve_fit, least_squares
 from imagedata import Series
 
@@ -78,6 +79,8 @@ def fit_curve_voxels(fun: callable,
 
     # prm['vis'] = True
     b = np.full((len(b0in), nvox), np.nan, dtype=np.float64)
+    statistic = {}
+    pvalue = {}
     for i in range(nvox):
         print('Voxel {} out of {}'.format(i + 1, nvox))
 
@@ -117,6 +120,9 @@ def fit_curve_voxels(fun: callable,
         # compute the response function
         # compute = fun(aif)
         compute = fun(timeline, *boutls)
+        res = scipy.stats.chisquare(f_obs=data['ydata'], f_exp=compute)
+        statistic[i] = res.statistic
+        pvalue[i] = res.pvalue
         # if prm['intmethod'] == 'conv':
         #     compute = myfun_sourbron_conv(boutls, data['xdata'], aif)
         # elif prm['intmethod'] == 'numint':
@@ -152,6 +158,8 @@ def fit_curve_voxels(fun: callable,
 
     out['fitted'] = f
     out['b'] = b.copy()
+    out['statistic'] = statistic.copy()
+    out['pvalue'] = pvalue.copy()
     # ROI volume
     out['roivol'] = np.sum(vol)
     out['roivolunit'] = 'ml'
