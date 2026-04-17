@@ -81,6 +81,7 @@ def fit_curve_voxels(fun: callable,
     b = np.full((len(b0in), nvox), np.nan, dtype=np.float64)
     statistic = {}
     pvalue = {}
+    r2 = {}
     for i in range(nvox):
         print('Voxel {} out of {}'.format(i + 1, nvox))
 
@@ -123,6 +124,21 @@ def fit_curve_voxels(fun: callable,
         res = scipy.stats.chisquare(f_obs=data['ydata'], f_exp=compute, sum_check=False)
         statistic[i] = res.statistic
         pvalue[i] = res.pvalue
+
+        # Calculate coefficient of determination (the R2 value)
+        # Source - https://stackoverflow.com/a/29015491
+        # Posted by ali_m, modified by community. See post 'Timeline' for change history
+        # Retrieved 2026-04-17, License - CC BY-SA 3.0
+
+        # residual sum of squares
+        ss_res = np.sum((data['ydata'] - compute) ** 2)
+
+        # total sum of squares
+        ss_tot = np.sum((data['ydata'] - np.mean(data['ydata'])) ** 2)
+
+        # r-squared
+        r2[i] = 1 - (ss_res / ss_tot)
+
         # if prm['intmethod'] == 'conv':
         #     compute = myfun_sourbron_conv(boutls, data['xdata'], aif)
         # elif prm['intmethod'] == 'numint':
