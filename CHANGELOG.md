@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!--next-version-placeholder-->
 
-## [v0.1.2-dev1] - 2026-04-17
+## [v0.1.2] - 2026-06-12
 * fit_curve_voxels: Record chi-square statistic and pvalue in output
+* fit_curves: shift parker AIF to match actual data
+* Require imagedata >= 3.9.4
 
 ## [v0.1.2-dev0] - 2026-04-17
 * fit_curves: shift parker AIF to match actual data
