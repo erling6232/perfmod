@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "perfmod"
-version = "0.1.2-dev2"
+version = "0.1.2-dev3"
 license = {text = "MIT License"}
 authors = [
     {name = "Erling Andersen", email = "Erling.Andersen@Helse-Bergen.NO"}
@@ -39,7 +39,7 @@ classifiers = [
 ]
 dependencies = [
     "setuptools",
-    "imagedata>=3.8.14,<4",
+    "imagedata>=3.9.4,<4",
     "numpy",
     "scipy>=1.16.0"
 ]
