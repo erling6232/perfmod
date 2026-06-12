@@ -99,7 +99,7 @@ def fit_curves(im: np.ndarray | Series,
     if h is None:
         try:
             h = im.spacing
-        except AttributeError:
+        except (AttributeError, ValueError):
             h = (1, 1, 1)
     assert len(h) == 3, "Wrong image spacing {}".format(h)
 
