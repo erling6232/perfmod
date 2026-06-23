@@ -23,9 +23,9 @@ class TestSemiquant(unittest.TestCase):
         self.df = pd.read_csv(io.StringIO(response.data.decode("utf-8")), sep = ",")
 
     def test_1D(self):
-        desired_washin = [0.0221636, 0.0247124, 0.0080519]
-        desired_ttp = [13., 14., 141.]
-        desired_peak = [0.2627947, 0.2953006, 0.1713341]
+        desired_washin = [0.0178137, 0.0198341, 0.0066556]
+        desired_ttp = [8., 8., 8.]
+        desired_peak = [0.10611, 0.1180357, 0.0413064]
         for currentvoxel in range(3):
             labelname = 'test_vox_T' + str(currentvoxel + 1) + '_highSNR'
             testdata = self.df[(self.df['label'] == labelname)]
@@ -41,16 +41,16 @@ class TestSemiquant(unittest.TestCase):
             vp_ref = testdata['vp'].to_numpy()[0]
 
 
-            washin_map, ttp_map, peak_amp = compute_washin(c, times=t, metric=c,  # metric='percent',
+            washin_map, slope_map, ttp_map, peak_amp = compute_washin(c, times=t, metric=c,  # metric='percent',
                                                            baseline_frames=60)
             np.testing.assert_almost_equal(washin_map, desired_washin[currentvoxel], err_msg=f'Washin map for voxel {currentvoxel} is incorrect')
             np.testing.assert_almost_equal(ttp_map, desired_ttp[currentvoxel], err_msg=f'TTP map for voxel {currentvoxel} is incorrect')
             np.testing.assert_almost_equal(peak_amp, desired_peak[currentvoxel], err_msg=f'Peak amp for voxel {currentvoxel} is incorrect')
 
     def test_1D_percent(self):
-        desired_washin = [420587382080923.1, 438882964127041.1, 25273495817833.117]
-        desired_ttp = [13., 14., 141.]
-        desired_peak = [5470997579656065.0, 6147723110382640.0, 3566924522918533.5]
+        desired_washin = [276131638673812.72, 307166058674562.44, 107492210022561.36]
+        desired_ttp = [8., 8., 8.]
+        desired_peak = [2209053109390501.8, 2457328469396499.5, 859937680180490.9]
         for currentvoxel in range(3):
             labelname = 'test_vox_T' + str(currentvoxel + 1) + '_highSNR'
             testdata = self.df[(self.df['label'] == labelname)]
@@ -65,7 +65,7 @@ class TestSemiquant(unittest.TestCase):
             ve_ref = testdata['ve'].to_numpy()[0]
             vp_ref = testdata['vp'].to_numpy()[0]
 
-            washin_map, ttp_map, peak_amp = compute_washin(c, times=t, metric='percent',
+            washin_map, slope_map, ttp_map, peak_amp = compute_washin(c, times=t, metric='percent',
                                                            baseline_frames=60,
                                                            method='arrival-to-peak')
             np.testing.assert_almost_equal(washin_map, desired_washin[currentvoxel], err_msg=f'Washin map for voxel {currentvoxel} is incorrect', decimal=3)
@@ -91,7 +91,7 @@ class TestSemiquant(unittest.TestCase):
             ve_ref = testdata['ve'].to_numpy()[0]
             vp_ref = testdata['vp'].to_numpy()[0]
 
-            washin_map, ttp_map, peak_amp = compute_washin(c, times=t, metric='percent',
+            washin_map, slope_map, ttp_map, peak_amp = compute_washin(c, times=t, metric='percent',
                                                            baseline_frames=60,
                                                            method='logistic')
             # np.testing.assert_almost_equal(washin_map, desired_washin[currentvoxel],
