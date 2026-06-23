@@ -86,7 +86,7 @@ def compute_washin(
         vis=False,
         savefig=None
 ) -> tuple[Series, Series, Series, Series]:
-    """Compute washin_map, peak_amp and ttp_map.
+    """Compute washin_map, slope_map, ttp_map, peak_amp
 
     Arguments:
         img4d: Series array, first axis must be time
@@ -105,7 +105,7 @@ def compute_washin(
         TR=None, TE=None, FA_deg=None  # sequence params for spoiled GRE approx (optional)
 
     Returns:
-        washin_map, ttp_map, peak_amp
+        washin_map, slope_map, ttp_map, peak_amp
     """
     if times is None:
         times = img4d.timeline
