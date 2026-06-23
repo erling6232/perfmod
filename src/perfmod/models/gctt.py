@@ -39,7 +39,7 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         # Hv = np.convolve(Hv * F, aif_value)  # vascular part of IRF
         # Hp = np.convolve(Hp * F, aif_value)  # parenchymal part of IRF
 
-        return h
+        return np.nan_to_num(h)
 
     # Set defaults
     prm = default_parameters()
