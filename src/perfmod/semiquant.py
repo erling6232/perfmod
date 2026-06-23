@@ -107,11 +107,9 @@ def compute_washin(
     Returns:
         washin_map, ttp_map, peak_amp
     """
-    print(f'img4d {img4d.shape}')
     if times is None:
         times = img4d.timeline
     result_shape = (1,) if img4d.ndim < 2 else img4d.shape[1:]
-    print(f'result_shape {result_shape}')
     # If metric input is a string, compute percent-change same as before
     raw_mode = isinstance(metric, str)
     if raw_mode and metric not in ['percent', 'concentration']:
@@ -121,11 +119,7 @@ def compute_washin(
         baseline = np.array(np.mean(img4d[:baseline_frames], axis=0))
         if baseline.ndim < 1:
             baseline = np.array(baseline).reshape(1)
-            print('Change float into ndarray')
-        print(f'baseline {type(baseline)} {baseline.shape}')
         baseline[baseline == 0] = np.finfo(float).eps
-        print(f'baseline {type(baseline)} {baseline.shape}')
-        print(f'til metric_arr img4d {img4d.shape} baseline[None] {baseline[None].shape}')
         if metric == 'percent':
             metric_arr = 100.0 * (img4d - baseline) / np.abs(baseline)
         elif metric == 'concentration':
@@ -145,7 +139,6 @@ def compute_washin(
             metric_arr = metric_arr[0]
     else:
         metric_arr: np.ndarray = metric
-    print(f'metric_arr {metric_arr.shape}')
 
     if smooth_window and smooth_window > 1:
         metric_arr = scipy.ndimage.uniform_filter1d(metric_arr, size=smooth_window, axis=0, mode='nearest')
@@ -162,7 +155,6 @@ def compute_washin(
     # washin_map = np.empty_like(metric_arr[0], dtype=float); washin_map[:] = np.nan
 
     # helper to find arrival and peak (simple reuse of prior logic)
-    print(f'metric_arr {metric_arr.shape[1:]}')
     for idx in np.ndindex(metric_arr.shape[1:]):
         curve = metric_arr[tuple((slice(0, nt),)) + idx]
         fig, ax = plt.subplots(1)
@@ -254,7 +246,6 @@ def compute_washin(
             y_dense = logistic(t_dense, *params)
             TTP_numeric = t_dense[np.argmax(y_dense)]
 
-            print(f'TTP_inflection: {TTP_inflection}, TTP_p95: {TTP_p95}, TTP_numeric: {TTP_numeric}')
             ttp_map[idx] = TTP_p95
             # peak_amp[idx] = K
             washin_map[idx] = B
@@ -267,8 +258,6 @@ def compute_washin(
                 fig, ax = plt.subplots(1, sharex=True)
                 ax.scatter(times, curve, label='Tissue')
                 ax.plot(t, logistic(t, *params), 'r-', label='Fitted function')
-                print('params:', params)
-                print('cov:', cov)
                 # ax.plot(x, dydx, 'y-', label='Slope')
                 ax.axvline(x=t_arrival, color='y', linestyle='-', label='Arrival')
                 ax.axvline(x=t_peak, color='y', linestyle='--')
