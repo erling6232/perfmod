@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!--next-version-placeholder-->
 
+## [v0.2.0-dev6] - 2026-06-23
+### Added
+* semiquant.find_shoulder().
+* semiquant.calculate_auc_maps().
+
+## [v0.2.0-dev0] - 2026-06-18
+### Added
+* Semiquant methods for washin, ttp and peak amplitude
+
 ## [v0.1.2] - 2026-06-12
 * fit_curve_voxels: Record chi-square statistic and pvalue in output
 * fit_curves: shift parker AIF to match actual data
