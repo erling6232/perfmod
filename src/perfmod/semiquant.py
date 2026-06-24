@@ -246,7 +246,7 @@ def compute_washin(
             y_dense = logistic(t_dense, *params)
             TTP_numeric = t_dense[np.argmax(y_dense)]
 
-            ttp_map[idx] = TTP_p95
+            ttp_map[idx] = TTP_inflection
             # peak_amp[idx] = K
             washin_map[idx] = B
             try:
