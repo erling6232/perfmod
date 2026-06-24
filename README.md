@@ -7,3 +7,4 @@ Perfusion modelling
 * Tofts
 * Annet
 * GCTT
+* Semiquant washin, ttp, peak amplitude, initial area-under-curve
