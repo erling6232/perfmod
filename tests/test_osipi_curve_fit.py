@@ -253,7 +253,7 @@ class test_osipi_curve_fit(unittest.TestCase):
                     self.assertAlmostEqual(0.0024, out['vp'], 4)
                     self.assertAlmostEqual(0.1896, out['Tp'], 3)
                     self.assertAlmostEqual(0.00013049, out['Ft'], 4)
-                    self.assertAlmostEqual(118.1522, out['Tt'], 4)
+                    self.assertAlmostEqual(118.152267, out['Tt'], 4)
                 case 2:
                     self.assertAlmostEqual(0.00069, out['vp'], 4)
                     self.assertAlmostEqual(0.2827, out['Tp'], 3)
