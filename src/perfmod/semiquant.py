@@ -62,13 +62,6 @@ def first_major_peak_ttp(t, E, post_idx_start=0, min_prominence=5.0, min_distanc
         "properties": {k: v.tolist() if hasattr(v, "tolist") else v for k, v in props.items()}
     }
 
-# Example usage:
-# t = np.array([0,10,20,30,40,50,60])            # seconds
-# E = np.array([0,0,5,30,80,60,20])             # percent enhancement
-# result = first_major_peak_ttp(t, E, post_idx_start=2, min_prominence=10, min_distance_seconds=15)
-# print(result)
-
-
 
 def compute_washin(
         img4d: Series,
