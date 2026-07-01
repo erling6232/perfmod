@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!--next-version-placeholder-->
 
+## [v0.2.0-dev8] - 2026-07-01
+### Added
+* semiquant.logistic_then_linear().
+
 ## [v0.2.0-dev7] - 2026-06-24
 ### Changed
 * semiquant.calculate_washin(): Use inflection time as TTP with logistic curve.

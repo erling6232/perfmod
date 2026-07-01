@@ -14,6 +14,70 @@ def logistic(t, A, K, B, M):
     return A + (K - A) / (1 + np.exp(-B * (t - M)))
 
 
+def logistic_then_linear(t: np.ndarray,
+                         b: float,
+                         A: float,
+                         k: float,
+                         t0: float,
+                         tp: float,
+                         m: float) -> np.ndarray:
+    """
+    Fit a logistic (sigmoid) model to DCE-MRI time courses and
+    estimate wash-in and wash-out slopes.
+    A simple piecewise model:
+
+    \[
+    y(t)=
+    \begin{cases}
+    b + \frac{A}{1+\exp(-k(t-t_0))} & t\le t_p \\
+    \left(y(t_p)\right) + m\,(t-t_p) & t> t_p
+    \end{cases}
+    \]
+    """
+
+    # wash-in logistic
+    y_in = b + A / (1.0 + np.exp(-k * (t - t0)))
+
+    # value at the join time tp
+    y_tp = b + A / (1.0 + np.exp(-k * (tp - t0)))
+
+    # linear wash-out after tp
+    y_out = y_tp + m * (t - tp)
+
+    # piecewise combine
+    return np.where(t <= tp, y_in, y_out)
+
+
+def linear(t, K, slope):
+    return slope * t + K  # + y0[-1]
+
+
+def plot_ttp(savefig, fun, times, curve, params, t_arrival, peak_frame, title=''):
+    try:
+        # A, K, B, M, _K, slope = params
+        A, K, B, M, t_break, slope = params
+    except ValueError:
+        A, K, B, M = params
+        t_break, slope = None, None
+    TTP_inflection = M
+    p = 0.95
+    # TTP_p95 = M - (1.0 / B) * np.log((1.0 / p) - 1.0)
+    fig, ax = plt.subplots(1, sharex=True)
+    ax.scatter(times, curve, label='Tissue')
+    ax.plot(times, fun(times, *params), 'r-', label='Fitted function')
+    # ax.plot(x, dydx, 'y-', label='Slope')
+    ax.axvline(x=t_arrival, color='y', linestyle='-', label='Arrival')
+    if t_break is not None:
+        ax.axvline(x=t_break, color='m', linestyle='--', label='$t_p$')
+    # ax.axvline(x=M - TTP_p95 / 2, color='k', linestyle='--', label='TTP_p95')
+    # ax.axvline(x=M + TTP_p95 / 2, color='k', linestyle='--')
+    ax.axvline(x=M - TTP_inflection / 2, color='k', linestyle='--', label='TTP')
+    ax.axvline(x=M + TTP_inflection / 2, color='k', linestyle='--')
+    ax.legend(title=title)
+    if savefig is not None:
+        plt.savefig(savefig)
+
+
 def first_major_peak_ttp(t, E, post_idx_start=0, min_prominence=5.0, min_distance_seconds=None):
     """
     t: 1D array of acquisition times (same units as desired TTP)
@@ -45,7 +109,8 @@ def first_major_peak_ttp(t, E, post_idx_start=0, min_prominence=5.0, min_distanc
     while peaks.size == 0:
         tries += 1
         if tries > 100:
-            return {"peak_index": None, "peak_time": None, "peak_value": None, "peaks_indices": peaks + post_idx_start, "properties": props}
+            return {"peak_index": None, "peak_time": None, "peak_value": None, "peaks_indices": peaks + post_idx_start,
+                    "properties": props}
 
         min_prominence *= 0.9
         peaks, props = find_peaks(E_post, prominence=min_prominence, distance=distance)
@@ -175,7 +240,7 @@ def compute_washin(
         peak_amp[idx] = curve[peak_frame]
         result = first_major_peak_ttp(times, curve,
                                       post_idx_start=arrival_idx,
-                                      min_prominence=0.3*float(peak_amp[idx][0]),
+                                      min_prominence=0.3 * float(peak_amp[idx][0]),
                                       min_distance_seconds=15)
         t_shoulder1, x_shoulder1, _idx1 = find_shoulder(times[arrival_idx:],
                                                         curve[arrival_idx:],
@@ -188,7 +253,8 @@ def compute_washin(
         t_peak = times[peak_frame]
         peak_amp[idx] = curve[peak_frame]
         ttp_map[idx] = (t_peak - (t_injection if t_injection is not None else t_arrival))
-        plt.axvline(x=t_arrival); plt.axvline(x=t_peak)
+        plt.axvline(x=t_arrival);
+        plt.axvline(x=t_peak)
 
         if method == 'arrival-to-peak':
             dt = t_peak - t_arrival
@@ -209,7 +275,7 @@ def compute_washin(
                 # robust linear fit (ordinary least squares)
                 slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(x, y)
                 washin_map[idx] = slope  # units metric units per second
-                plt.plot((x[0], x[-1]), (slope*x[0]+intercept, slope*x[-1]+intercept))
+                plt.plot((x[0], x[-1]), (slope * x[0] + intercept, slope * x[-1] + intercept))
                 plt.plot((x[0], x[-1]), (y[0], y[-1]))  # , ax=ax)
         elif method == 'logistic':
             # Source - https://stackoverflow.com/a/60210529
@@ -248,21 +314,89 @@ def compute_washin(
                 pass
 
             if savefig is not None or vis:
-                fig, ax = plt.subplots(1, sharex=True)
-                ax.scatter(times, curve, label='Tissue')
-                ax.plot(t, logistic(t, *params), 'r-', label='Fitted function')
-                # ax.plot(x, dydx, 'y-', label='Slope')
-                ax.axvline(x=t_arrival, color='y', linestyle='-', label='Arrival')
-                ax.axvline(x=t_peak, color='y', linestyle='--')
-                # ax.axvline(x=M-TTP_numeric/2, color='b', linestyle='--', label='TTP_numeric')
-                # ax.axvline(x=M+TTP_numeric/2, color='b', linestyle='--')
-                ax.axvline(x=M-TTP_p95/2, color='k', linestyle='--', label='TTP_p95')
-                ax.axvline(x=M+TTP_p95/2, color='k', linestyle='--')
-                ax.axvline(x=M-TTP_inflection/2, color='g', linestyle='--', label='TTP_inflection')
-                ax.axvline(x=M+TTP_inflection/2, color='g', linestyle='--')
-                ax.legend()
-                if savefig is not None:
-                    plt.savefig(savefig)
+                plot_ttp(savefig, logistic, times, curve, params, t_arrival, t_peak, peak_frame)
+
+        elif method == 'logistic+linear':
+            # Source - https://stackoverflow.com/a/60210529
+            # Posted by Brenlla
+            # Retrieved 2026-06-18, License - CC BY-SA 4.0
+
+            y = curve
+            t = times
+
+            # initial guesses
+            b0 = np.min(y)
+            A0 = np.max(y) - b0
+            t_peak = t[np.argmax(y)]
+            # t_peak is t max or first shoulder, whatever comes first
+            t_peak = min(t_peak, times[peak_frame])
+            tp0 = t_peak
+
+            # logistic steepness guess
+            k0 = 1.0
+            # t0 near where rise is steep; start near tp
+            t00 = t_peak
+
+            # initial linear slope: estimate from last few points
+            if len(t) >= 3:
+                m0 = (y[-1] - y[-3]) / (t[-1] - t[-3])
+            else:
+                m0 = -0.1
+
+            p0 = [b0, A0, k0, t00, tp0, m0]
+
+            # bounds for stability
+            bounds = ([-np.inf, 0.0, 0.0, t.min(), t.min(), -np.inf],
+                      [np.inf, np.inf, np.inf, t.max(), t.max(), np.inf])
+
+            # # t: array of acquisition times (s or min); y: percent-enhancement
+            # p0 = [np.median(y[:baseline_frames]), y.max(), 0.3, t[np.argmax(y)]]  #, times[peak_frame], 0.0001]
+            # bounds = ([-np.inf, 0, 0, t.min()],  # , times[baseline_frames], -np.inf],
+            #           [np.inf, np.inf, np.inf, t.max()])  # , times[-1], np.inf])
+            #
+            params, cov = curve_fit(logistic_then_linear, t, y, p0=p0, bounds=bounds,
+                                             maxfev=50000)
+
+            b, A, k, t0, tp, m = params
+            yhat = logistic_then_linear(t, *params)
+
+            # Calculate R²
+            SS_res = np.sum((curve - yhat) ** 2)
+            SS_tot = np.sum((curve - np.mean(curve)) ** 2)
+            R_squared = 1 - (SS_res / SS_tot)
+
+            print("R²:", R_squared)
+
+            # wash-in slope: max derivative before or at tp
+            dydt = np.gradient(yhat, t)
+            wash_in_mask = t <= tp
+            wash_out_mask = t >= tp
+
+            wash_in_slope = np.max(dydt[wash_in_mask]) if np.any(wash_in_mask) else np.nan
+            # wash-out slope is exactly the fitted linear slope m
+            wash_out_slope = m
+
+            # # Option 1: inflection-based TTP
+            TTP_inflection = t0
+            #
+            # # Option 2: 95% of K
+            # p = 0.95
+            # TTP_p95 = t0 - (1.0 / k) * np.log((1.0 / p) - 1.0)
+            #
+            # # Option 3: numeric max on fine grid
+            # t_dense = np.linspace(t.min(), t.max(), 1000)
+            # y_dense = logistic(t_dense, *params_logistic)
+            # TTP_numeric = t_dense[np.argmax(y_dense)]
+
+            ttp_map[idx] = TTP_inflection
+            # peak_amp[idx] = K
+            washin_map[idx] = wash_in_slope
+            slope_map[idx] = wash_out_slope
+
+            if savefig is not None or vis:
+                plot_ttp(savefig, logistic_then_linear, times, curve, params,
+                         t_arrival, peak_frame,
+                         title=f'$R^2 = {R_squared:.3f}$')
 
         else:
             raise ValueError("method must be 'early', 'arrival-to-peak', 'logistic'")
@@ -270,31 +404,39 @@ def compute_washin(
 
     if issubclass(type(img4d), Series):
         _ttp_map = Series(np.nan_to_num(ttp_map, posinf=0, neginf=0), template=img4d, geometry=img4d)
-        _ttp_map.seriesDescription = 'TTP'; _ttp_map.window=300; _ttp_map.level=150
+        _ttp_map.seriesDescription = 'TTP'
+        _ttp_map.window = 60
+        _ttp_map.level = 30
         _peak_amp = Series(np.nan_to_num(peak_amp, posinf=0, neginf=0), template=img4d, geometry=img4d)
-        _peak_amp.seriesDescription = 'Peak amplitude'; _peak_amp.window=30; _peak_amp.level=15
+        _peak_amp.seriesDescription = 'Peak amplitude'
+        _peak_amp.window = 1
+        _peak_amp.level = 0.5
         _washin_map = Series(np.nan_to_num(washin_map, posinf=0, neginf=0), template=img4d, geometry=img4d)
-        _washin_map.seriesDescription = 'Wash-in slope [1/s]'; _washin_map.window = 60; _washin_map.level = 0
+        _washin_map.seriesDescription = 'Wash-in slope [1/s]'
+        _washin_map.window = 0.1
+        _washin_map.level = 0.05
         _slope_map = Series(np.nan_to_num(slope_map, posinf=0, neginf=0), template=img4d, geometry=img4d)
-        _slope_map.seriesDescription = 'Wash-in slope [1/s]'; _slope_map.window = 60; _slope_map.level = 0
+        _slope_map.seriesDescription = 'Wash-out slope [1/s]'
+        _slope_map.window = 0.01
+        _slope_map.level = 0.0
         return _washin_map, _slope_map, _ttp_map, _peak_amp
     else:
         return washin_map, slope_map, ttp_map, peak_amp
 
 
 def compute_ttp(
-    img4d,              # numpy array shape (nx,ny,nz,nt)
-    times,              # 1D array length nt, acquisition time (s) of each frame
-    method='percent',   # 'percent' or 'concentration'
-    baseline_frames=5,  # number of initial frames to compute baseline
-    smooth_window=3,    # temporal smoothing window (frames), set 0 to disable
-    arrival_thresh_pct=5.0,  # % signal change threshold to detect bolus arrival
-    t_injection=None,   # optional injection time in seconds (if you want TTP from injection)
-    r1=None,            # relaxivity (s^-1 mM^-1) if using concentration conversion
-    T10=None,           # pre-contrast T1 map shape (nx,ny,nz) if using concentration
-    TR=None, TE=None, FA_deg=None  # sequence params for spoiled GRE approx (optional)
+        img4d,  # numpy array shape (nx,ny,nz,nt)
+        times,  # 1D array length nt, acquisition time (s) of each frame
+        method='percent',  # 'percent' or 'concentration'
+        baseline_frames=5,  # number of initial frames to compute baseline
+        smooth_window=3,  # temporal smoothing window (frames), set 0 to disable
+        arrival_thresh_pct=5.0,  # % signal change threshold to detect bolus arrival
+        t_injection=None,  # optional injection time in seconds (if you want TTP from injection)
+        r1=None,  # relaxivity (s^-1 mM^-1) if using concentration conversion
+        T10=None,  # pre-contrast T1 map shape (nx,ny,nz) if using concentration
+        TR=None, TE=None, FA_deg=None  # sequence params for spoiled GRE approx (optional)
 ):
-    nx,ny,nz,nt = img4d.shape
+    nx, ny, nz, nt = img4d.shape
     assert len(times) == nt
 
     # baseline (mean over baseline_frames)
@@ -327,21 +469,21 @@ def compute_ttp(
         metric = scipy.ndimage.uniform_filter1d(metric, size=smooth_window, axis=3, mode='nearest')
 
     # outputs
-    ttp_map = np.full((nx,ny,nz), np.nan, dtype=float)
-    peak_amp = np.zeros((nx,ny,nz), dtype=float)
+    ttp_map = np.full((nx, ny, nz), np.nan, dtype=float)
+    peak_amp = np.zeros((nx, ny, nz), dtype=float)
 
     frame_dt = np.diff(times)
     # compute for each voxel
     for ix in range(nx):
         for iy in range(ny):
             for iz in range(nz):
-                curve = metric[ix,iy,iz,:]
+                curve = metric[ix, iy, iz, :]
                 # skip flat or zero baseline voxels
                 if np.all(np.isnan(curve)) or np.all(curve <= 0):
                     continue
                 # bolus arrival time: first frame after baseline where metric > threshold
                 baseline_mean = np.mean(curve[:baseline_frames])
-                baseline_std = np.std(curve[:baseline_frames]) if baseline_frames>1 else 0.0
+                baseline_std = np.std(curve[:baseline_frames]) if baseline_frames > 1 else 0.0
                 arrival_idx = None
                 for t_idx in range(baseline_frames, nt):
                     if curve[t_idx] >= baseline_mean + arrival_thresh_pct:
@@ -357,14 +499,14 @@ def compute_ttp(
                     continue
                 peak_local_idx = np.nanargmax(post_curve)
                 peak_frame = arrival_idx + int(peak_local_idx)
-                peak_amp[ix,iy,iz] = curve[peak_frame]
+                peak_amp[ix, iy, iz] = curve[peak_frame]
 
                 # sub-frame peak interpolation using cubic spline if possible and not at boundaries
                 if nt >= 4:
-                    tt = times[arrival_idx:arrival_idx+len(post_curve)]
+                    tt = times[arrival_idx:arrival_idx + len(post_curve)]
                     try:
                         cs = scipy.interpolate.CubicSpline(tt, post_curve, bc_type='natural')
-                        dense_t = np.linspace(tt[0], tt[-1], max(100, len(tt)*10))
+                        dense_t = np.linspace(tt[0], tt[-1], max(100, len(tt) * 10))
                         dense_vals = cs(dense_t)
                         dense_peak_idx = np.nanargmax(dense_vals)
                         t_peak = dense_t[dense_peak_idx]
@@ -380,18 +522,18 @@ def compute_ttp(
                     t_bolus = times[arrival_idx]
                     ttp = t_peak - t_bolus
 
-                ttp_map[ix,iy,iz] = ttp
+                ttp_map[ix, iy, iz] = ttp
 
     return ttp_map, peak_amp
 
 
 def compute_auc_maps(
-    img4d, times,
-    baseline_frames=5,
-    smooth_window=3,
-    arrival_thresh_pct=5.0,
-    windows_s=(30.0, 60.0),   # compute AUCs for these durations after arrival
-    method='percent'          # 'percent' or precomputed metric ndarray
+        img4d, times,
+        baseline_frames=5,
+        smooth_window=3,
+        arrival_thresh_pct=5.0,
+        windows_s=(30.0, 60.0),  # compute AUCs for these durations after arrival
+        method='percent'  # 'percent' or precomputed metric ndarray
 ):
     # prepare metric array
     result_shape = (1,) if img4d.ndim < 2 else img4d.shape[1:]
@@ -407,8 +549,8 @@ def compute_auc_maps(
         metric = scipy.ndimage.uniform_filter1d(metric, size=smooth_window, axis=0, mode='nearest')
 
     nt = img4d.shape[0]
-    auc_total = np.full(result_shape, np.nan, dtype=float)        # integral over full timeseries
-    auc_from_arrival = np.full(result_shape, np.nan, dtype=float) # integral from detected arrival to end
+    auc_total = np.full(result_shape, np.nan, dtype=float)  # integral over full timeseries
+    auc_from_arrival = np.full(result_shape, np.nan, dtype=float)  # integral from detected arrival to end
     auc_fixed = {w: np.full(result_shape, np.nan, dtype=float) for w in windows_s}
     auc_fixed_norm = {w: np.full(result_shape, np.nan, dtype=float) for w in windows_s}
 
@@ -446,8 +588,8 @@ def compute_auc_maps(
                 # find index of first frame >= t_end
                 idx_end = np.searchsorted(times, t_end)
                 # gather times and values from arrival_idx to idx_end (inclusive)
-                t_seg = times[arrival_idx:idx_end+1]
-                y_seg = curve[arrival_idx:idx_end+1]
+                t_seg = times[arrival_idx:idx_end + 1]
+                y_seg = curve[arrival_idx:idx_end + 1]
                 # if t_end not exactly a sample, interpolate value at t_end
                 if t_seg[-1] > t_end:
                     # should not happen due to searchsorted logic, but handle generally
