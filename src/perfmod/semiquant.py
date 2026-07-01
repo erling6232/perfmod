@@ -400,7 +400,8 @@ def compute_washin(
 
         else:
             raise ValueError("method must be 'early', 'arrival-to-peak', 'logistic'")
-    plt.show()
+    if vis:
+        plt.show()
 
     if issubclass(type(img4d), Series):
         _ttp_map = Series(np.nan_to_num(ttp_map, posinf=0, neginf=0), template=img4d, geometry=img4d)
