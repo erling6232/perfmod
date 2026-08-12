@@ -78,6 +78,50 @@ def plot_ttp(savefig, fun, times, curve, params, t_arrival, peak_frame, title=''
         plt.savefig(savefig)
 
 
+def compute_peak_amp(times, curve,
+                     baseline_frames=5,
+                     arrival_thresh_pct=5.0, t_injection=None):
+    baseline_mean = np.mean(curve[:baseline_frames])
+    arrival_idx = None
+    for t_idx in range(baseline_frames, len(times)):
+        if abs(curve[t_idx]) >= abs(baseline_mean * (1 + arrival_thresh_pct)):
+            arrival_idx = max(t_idx - 1, 0)
+            break
+    if arrival_idx is None:
+        return None, None
+    t_arrival = times[arrival_idx]
+
+    # find peak index after arrival
+    post_curve = curve[arrival_idx:]
+    if post_curve.size == 0:
+        return None, None
+    peak_local_idx = np.nanargmax(post_curve)
+    peak_frame = arrival_idx + int(peak_local_idx)
+    peak_amp = curve[peak_frame]
+    result = first_major_peak_ttp(times, curve,
+                                  post_idx_start=arrival_idx,
+                                  min_prominence=0.3 * float(peak_amp[0]),
+                                  min_distance_seconds=15)
+    t_shoulder1, x_shoulder1, _idx1 = find_shoulder(times[arrival_idx:],
+                                                    curve[arrival_idx:],
+                                                    positive_only=True)
+    _idx = arrival_idx + _idx1
+    peak_frame = result['peak_index']
+    if peak_frame is None:
+        return None, None
+    peak_frame = min(peak_frame, _idx)
+    t_peak = times[peak_frame]
+    peak_amp = curve[peak_frame]
+    ttp_map = (t_peak - (t_injection if t_injection is not None else t_arrival))
+    prms = {
+        't_arrival': t_arrival,
+        't_peak': t_peak,
+        'peak_frame': peak_frame,
+        'arrival_idx': arrival_idx
+    }
+    return peak_amp, ttp_map, prms
+
+
 def first_major_peak_ttp(t, E, post_idx_start=0, min_prominence=5.0, min_distance_seconds=None):
     """
     t: 1D array of acquisition times (same units as desired TTP)
@@ -221,6 +265,7 @@ def compute_washin(
         show(curve, x=times, ax=ax, label='curve', show=False)
         if np.all(np.isnan(curve)) or np.all(curve <= 0):
             continue
+        """
         baseline_mean = np.mean(curve[:baseline_frames])
         arrival_idx = None
         for t_idx in range(baseline_frames, nt):
@@ -253,7 +298,14 @@ def compute_washin(
         t_peak = times[peak_frame]
         peak_amp[idx] = curve[peak_frame]
         ttp_map[idx] = (t_peak - (t_injection if t_injection is not None else t_arrival))
-        plt.axvline(x=t_arrival);
+        """
+        # peak_amp[idx], ttp_map[idx], t_arrival, t_peak = compute_peak_amp(times, curve, baseline_frames, arrival_thresh_pct, t_injection)
+        peak_amp[idx], ttp_map[idx], prms = compute_peak_amp(times, curve, baseline_frames, arrival_thresh_pct, t_injection)
+        t_arrival = prms['t_arrival']
+        t_peak = prms['t_peak']
+        peak_frame = prms['peak_frame']
+        arrival_idx = prms['arrival_idx']
+        plt.axvline(x=t_arrival)
         plt.axvline(x=t_peak)
 
         if method == 'arrival-to-peak':
