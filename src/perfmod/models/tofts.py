@@ -48,7 +48,7 @@ def make_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 def make_extended_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 
     def extended_tofts(t, *b):
-        """h = extended_tofts(t, b), where b = [ktrans ve delay]
+        """h = extended_tofts(t, b), where b = [ktrans ve vp]
         Model based on
         ...
 
