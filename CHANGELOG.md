@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!--next-version-placeholder-->
 
+## [v0.2.0-dev9] - 2026-10-19
+
 ## [v0.2.0-dev8] - 2026-07-01
 ### Added
 * semiquant.logistic_then_linear().
