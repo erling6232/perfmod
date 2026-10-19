@@ -100,7 +100,7 @@ def compute_peak_amp(times, curve,
     peak_amp = curve[peak_frame]
     result = first_major_peak_ttp(times, curve,
                                   post_idx_start=arrival_idx,
-                                  min_prominence=0.3 * float(peak_amp[0]),
+                                  min_prominence=0.3 * float(peak_amp),
                                   min_distance_seconds=15)
     t_shoulder1, x_shoulder1, _idx1 = find_shoulder(times[arrival_idx:],
                                                     curve[arrival_idx:],
