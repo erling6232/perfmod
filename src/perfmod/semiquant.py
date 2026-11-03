@@ -24,16 +24,16 @@ def logistic_then_linear(t: np.ndarray,
     """
     Fit a logistic (sigmoid) model to DCE-MRI time courses and
     estimate wash-in and wash-out slopes.
-    A simple piecewise model:
-
-    \[
-    y(t)=
-    \begin{cases}
-    b + \frac{A}{1+\exp(-k(t-t_0))} & t\le t_p \\
-    \left(y(t_p)\right) + m\,(t-t_p) & t> t_p
-    \end{cases}
-    \]
     """
+    # A simple piecewise model:
+    #
+    # \[
+    # y(t)=
+    # \begin{cases}
+    # b + \frac{A}{1+\exp(-k(t-t_0))} & t\le t_p \\
+    # \left(y(t_p)\right) + m\,(t-t_p) & t> t_p
+    # \end{cases}
+    # \]
 
     # wash-in logistic
     y_in = b + A / (1.0 + np.exp(-k * (t - t0)))
