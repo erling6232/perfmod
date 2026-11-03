@@ -11,8 +11,8 @@ def make_sourbron_conv(aif_value, b0in, prmin):
         vp, tp, ft, tt = b
 
         dt = np.empty_like(t, dtype=np.float32)
-        dt[1:] = t[1:] - t[:-1]
-        dt[0] = dt[1]
+        dt[:-1] = t[1:] - t[:-1]
+        dt[-1] = t[-1] - t[-2]
 
         f2 = dt * np.exp(-t / tp)
         cp = np.convolve(aif_value, f2 / tp)[:t.size]

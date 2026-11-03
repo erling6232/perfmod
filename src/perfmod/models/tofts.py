@@ -15,8 +15,12 @@ def make_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 
         ktrans, ve = b
 
+        dt = np.empty_like(t, dtype=np.float32)
+        dt[:-1] = t[1:] - t[:-1]
+        dt[-1] = t[-1] - t[-2]
+
         # kep = ktrans/ve
-        h = ktrans * np.exp(-ktrans/ve * t)
+        h = dt * ktrans * np.exp(-ktrans/ve * t)
         h = np.convolve(h, aif_value)[:t.size]
         return h
 
@@ -58,7 +62,11 @@ def make_extended_tofts(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 
         ktrans, ve, vp = b
 
-        h = ktrans * np.exp(-ktrans/ve * t)
+        dt = np.empty_like(t, dtype=np.float32)
+        dt[:-1] = t[1:] - t[:-1]
+        dt[-1] = t[-1] - t[-2]
+
+        h = dt * ktrans * np.exp(-ktrans/ve * t)
         h = vp * aif_value + np.convolve(h, aif_value)[:t.size]
 
         # kep = ktrans/ve

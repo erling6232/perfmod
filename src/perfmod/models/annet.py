@@ -10,8 +10,8 @@ def make_annet(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         tau, d, fa, k21, k12 = b
 
         dt = np.empty_like(x, dtype=np.float32)
-        dt[1:] = x[1:] - x[:-1]
-        dt[0] = dt[1]
+        dt[:-1] = x[1:] - x[:-1]
+        dt[-1] = x[-1] - x[-2]
 
         m = np.mean(aif_value)
         f1 = np.interp(x + tau, x, aif_value, left=m, right=m)

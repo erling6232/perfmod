@@ -22,6 +22,10 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 
         F, E, ve, Tc, alphainv = b
 
+        dt = np.empty_like(t, dtype=np.float32)
+        dt[:-1] = t[1:] - t[:-1]
+        dt[-1] = t[-1] - t[-2]
+
         alpha = (1 / alphainv)
         tau = Tc / alpha
         kep = (E * F) / ve
@@ -33,7 +37,7 @@ def make_gctt(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
         Rp = (E * np.exp(-kep * t)) / ((1 - kep * tau) ** alpha) * \
              (1 - sc.gammaincc(alpha, (1 / tau - kep) * t))
 
-        R = Rv + Rp
+        R = dt * (Rv + Rp)
         h = F * np.convolve(R, aif_value)[:t.size]
 
         # Hv = np.convolve(Hv * F, aif_value)  # vascular part of IRF
@@ -85,7 +89,11 @@ def make_gctt_delay(aif_value, b0in, prmin) -> tuple[callable, dict, dict]:
 
         F, E, ve, Tc, alphainv, delay = b
         # t = t.copy() + delay
-        dt = t[2] - t[1]
+
+        dt = np.empty_like(t, dtype=np.float32)
+        dt[:-1] = t[1:] - t[:-1]
+        dt[-1] = t[-1] - t[-2]
+
         aif_shifted = ndimage.shift(aif_value, delay / dt, mode='nearest')
         # aif_shifted = getParker(aif_value, 1/norm_coeff, delay, t)
         aif_shifted = parker(parker_parameters, len(t), t - delay)
