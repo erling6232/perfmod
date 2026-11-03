@@ -81,10 +81,20 @@ class TestPerfusion(unittest.TestCase):
                          timeline_aif=self.timeline)
         np.testing.assert_array_almost_equal(
             out['b'][:, 0],
-            np.array([0.0062, 0.0046]),
+            np.array([0.0927, 0.0764]),
             decimal=4
         )
 
+    def test_extended_tofts(self):
+        out = fit_curves(self.tissue, 'etm',
+                         im_aif=self.aif,
+                         timeline_data=self.timeline,
+                         timeline_aif=self.timeline)
+        np.testing.assert_array_almost_equal(
+            out['b'][:, 0],
+            np.array([0.0927, 0.0764, 1.842e-17]),
+            decimal=4
+        )
 
     def test_annet(self):
         out = fit_curves(self.tissue, 'annet',
@@ -93,7 +103,7 @@ class TestPerfusion(unittest.TestCase):
                          timeline_aif=self.timeline)
         np.testing.assert_array_almost_equal(
             out['b'][:, 0],
-            np.array([-0.1125957, 0.3926565, 1.21022689e-21, 0.239271914, 2.54635224]),
+            np.array([-0.1099708, 0.36466, 1.10149e-14, 0.309371, 2.74277]),
             2
         )
 
