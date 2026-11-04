@@ -88,13 +88,13 @@ def compute_peak_amp(times, curve,
             arrival_idx = max(t_idx - 1, 0)
             break
     if arrival_idx is None:
-        return None, None
+        return None, None, None
     t_arrival = times[arrival_idx]
 
     # find peak index after arrival
     post_curve = curve[arrival_idx:]
     if post_curve.size == 0:
-        return None, None
+        return None, None, None
     peak_local_idx = np.nanargmax(post_curve)
     peak_frame = arrival_idx + int(peak_local_idx)
     peak_amp = curve[peak_frame]
@@ -108,7 +108,7 @@ def compute_peak_amp(times, curve,
     _idx = arrival_idx + _idx1
     peak_frame = result['peak_index']
     if peak_frame is None:
-        return None, None
+        return None, None, None
     peak_frame = min(peak_frame, _idx)
     t_peak = times[peak_frame]
     peak_amp = curve[peak_frame]
