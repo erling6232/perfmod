@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.2.0-dev11] - 2026-11-04
 * compute_peak_amp: Correctly return 3 values when peak amp is not found, not 2.
+* Modified license specifier to be compatible with todays build tools.
 
 ## [v0.2.0-dev10] - 2026-11-03
 * Corrected calculation of integrals using actual time.
