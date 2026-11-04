@@ -301,6 +301,8 @@ def compute_washin(
         """
         # peak_amp[idx], ttp_map[idx], t_arrival, t_peak = compute_peak_amp(times, curve, baseline_frames, arrival_thresh_pct, t_injection)
         peak_amp[idx], ttp_map[idx], prms = compute_peak_amp(times, curve, baseline_frames, arrival_thresh_pct, t_injection)
+        if prms is None:
+            continue
         t_arrival = prms['t_arrival']
         t_peak = prms['t_peak']
         peak_frame = prms['peak_frame']
