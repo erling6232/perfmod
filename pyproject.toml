@@ -9,7 +9,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "perfmod"
 version = "0.2.0-dev11"
-license = {text = "MIT License"}
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
 authors = [
     {name = "Erling Andersen", email = "Erling.Andersen@Helse-Bergen.NO"}
 ]
@@ -32,7 +33,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Medical Science Apps."
